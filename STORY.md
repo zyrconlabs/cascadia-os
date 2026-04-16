@@ -124,4 +124,4 @@ From Houston, Texas, with love for engineering and for everyone who helped me ge
 
 ---
 
-*Cascadia OS is open source. If you build things and care about reliability, [the code is here](https://github.com/zyrcon-labs/cascadia-os).*
+*Cascadia OS is open source. If you build things and care about reliability, [the code is here](https://github.com/zyrconlabs/cascadia-os).*
