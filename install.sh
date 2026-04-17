@@ -84,7 +84,7 @@ fi
 
 # ── 7. First-time setup ───────────────────────────────────────────────────────
 info "Running first-time setup (cascadia.installer.once)..."
-python -m cascadia.installer.once
+"$VENV_DIR/bin/python" -m cascadia.installer.once --dir "$INSTALL_DIR"
 success "Setup complete."
 
 # ── 8. Launcher script ───────────────────────────────────────────────────────
@@ -93,11 +93,18 @@ mkdir -p "$HOME/.local/bin"
 cat > "$LAUNCHER" <<EOF
 #!/usr/bin/env bash
 source "$VENV_DIR/bin/activate"
-exec python -m cascadia.kernel.watchdog --config "$INSTALL_DIR/config.json" "\$@"
+exec "$VENV_DIR/bin/python" -m cascadia.kernel.watchdog --config "$INSTALL_DIR/config.json" "\$@"
 EOF
 chmod +x "$LAUNCHER"
 
-# ── 9. Done ───────────────────────────────────────────────────────────────────
+# ── 9. Open PRISM after start hint ──────────────────────────────────────────
+info "Starting Cascadia OS..."
+source "$VENV_DIR/bin/activate"
+nohup "$VENV_DIR/bin/python" -m cascadia.kernel.watchdog --config "$INSTALL_DIR/config.json" > "$INSTALL_DIR/data/logs/watchdog.log" 2>&1 &
+sleep 4
+if [[ "$(uname)" == "Darwin" ]]; then open "http://127.0.0.1:18810" 2>/dev/null || true; fi
+
+# ── 10. Done ──────────────────────────────────────────────────────────────────
 echo ""
 success "════════════════════════════════════════"
 success " Cascadia OS v0.21 installed successfully"
