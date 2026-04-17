@@ -21,7 +21,7 @@ die()     { echo -e "${RED}[cascadia] ERROR:${NC} $*" >&2; exit 1; }
 
 echo ""
 echo "  ╔══════════════════════════════════════╗"
-echo "  ║       Cascadia OS v0.2 Installer     ║"
+echo "  ║       Cascadia OS v0.21 Installer     ║"
 echo "  ╚══════════════════════════════════════╝"
 echo ""
 
@@ -100,7 +100,7 @@ chmod +x "$LAUNCHER"
 # ── 9. Done ───────────────────────────────────────────────────────────────────
 echo ""
 success "════════════════════════════════════════"
-success " Cascadia OS v0.2 installed successfully"
+success " Cascadia OS v0.21 installed successfully"
 success "════════════════════════════════════════"
 echo ""
 echo "  Start:   cascadia"
