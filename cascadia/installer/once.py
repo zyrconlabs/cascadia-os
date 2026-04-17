@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 VERSION = '0.21'
-SETUP_PORT = 18780
+SETUP_PORT = 18799
 REQUIRED_PYTHON = (3, 11)
 
 DEFAULT_DIRS = [
