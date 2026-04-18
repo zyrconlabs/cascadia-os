@@ -10,7 +10,7 @@ Decades later — aerospace engineering in Moscow, automation projects for Amazo
 
 I didn't want a chatbot. I wanted an operator I could trust. Something that remembers, asks before acting, and picks up where it left off after a crash. Something designed for the moment when things go wrong at three in the morning and nobody is watching.
 
-**That's what this is.** → [Full story](./STORY.md)
+**That's what this is.** → [Full story](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
 
 ---
 
@@ -30,7 +30,13 @@ I didn't want a chatbot. I wanted an operator I could trust. Something that reme
 
 ---
 
-## One-Click Install
+Most AI tools are impressive in demos. They forget context, act without guardrails, and collapse when a workflow spans more than one session.
+
+Cascadia OS is built to a different standard — durable enough to survive crashes, supervised enough to ask before taking sensitive actions, and honest enough to tell you exactly what it can and can't do.
+
+---
+
+## ⚡ One-Click Install
 
 **Mac / Linux:**
 ```bash
@@ -44,22 +50,25 @@ irm https://raw.githubusercontent.com/Zyrconlabs/cascadia-os/main/install.bat -O
 
 > **Requires:** Python 3.11+ and git
 
+The installer clones the repo, creates a virtual environment, installs the package, copies your config, runs first-time setup, and adds a `cascadia` launcher to your PATH.
+
 ---
 
 ## Manual Start
 
 ```bash
-# First-time setup (opens browser wizard at http://127.0.0.1:4010)
-python -m cascadia.installer.once
+# First-time setup
+python -m cascadia.installer.once          # Opens browser setup wizard at http://127.0.0.1:18780
+python -m cascadia.installer.once --no-browser  # Terminal fallback
 
-# Terminal-only setup
-python -m cascadia.installer.once --no-browser
-
-# Start the OS
+# Start the OS (watchdog keeps FLINT alive)
 python -m cascadia.kernel.watchdog --config config.json
 
 # Run all tests
 python -m unittest discover -s tests -v
+
+# Run crash and recovery drills
+python tests/test_crash_recovery.py
 ```
 
 ---
@@ -76,19 +85,13 @@ Cascadia OS coordinates AI operators that:
 
 ---
 
-## What is working right now (v0.31)
+## What is working right now
 
 ### Control plane
 | Module | What it does |
 |---|---|
 | FLINT `kernel/flint.py` | Process supervision, tiered startup, health polling, restart/backoff, graceful shutdown |
 | Watchdog `kernel/watchdog.py` | External FLINT liveness monitor — lives outside the supervision tree |
-
-### Installer
-| Module | What it does |
-|---|---|
-| ONCE `installer/once.py` | Browser setup wizard, RAM/GPU/Ollama detection, AI model config, directory init |
-| setup.html `installer/setup.html` | 4-step browser UI: system scan → model selection → config editor → launch |
 
 ### Durability layer
 | Module | What it does |
@@ -107,159 +110,76 @@ Cascadia OS coordinates AI operators that:
 | dependency_manager | Detects missing operators and permissions, writes blocked state |
 
 ### Named components
-| Name | Path | What it does |
-|---|---|---|
-| CREW | `registry/crew.py` | Operator group registry with wildcard capability validation |
-| VAULT | `memory/vault.py` | Durable SQLite-backed memory, capability-gated |
-| SENTINEL | `security/sentinel.py` | Risk classification: low / medium / high / critical per action |
-| CURTAIN | `encryption/curtain.py` | HMAC-SHA256 envelope signing and field encryption |
-| BEACON | `orchestrator/beacon.py` | Capability-checked routing and operator handoffs |
-| STITCH | `automation/stitch.py` | Workflow sequencing with built-in templates |
-| VANGUARD | `gateway/vanguard.py` | Inbound channel normalization, outbound dispatch |
-| HANDSHAKE | `bridge/handshake.py` | External API connection registry |
-| BELL | `chat/bell.py` | Chat sessions and approval response collection |
-| ALMANAC | `guide/almanac.py` | Component catalog, glossary (26 terms), runbooks |
-| PRISM | `dashboard/prism.py` | Live dashboard at `localhost:6300/` — runs, approvals, blocked, crew |
-
-### Operators (v0.31 — new)
-| Name | Port | What it does |
-|---|---|---|
-| SCOUT | `operators/scout/` · `7000` | Inbound lead capture — streaming chat, session history, AI + regex lead extraction, hot/warm/cold scoring, estimated deal value |
-| RECON | `operators/recon/` · `7001` | Outbound research agent — task.md-driven queries, CSV output, deduplication, live SSE dashboard |
+| Name | What it does |
+|---|---|
+| CREW | Operator group registry with wildcard capability validation |
+| VAULT | Durable SQLite-backed memory, capability-gated |
+| SENTINEL | Risk classification: low / medium / high / critical per action |
+| CURTAIN | HMAC-SHA256 envelope signing and field encryption (stdlib only) |
+| BEACON | Capability-checked routing and operator handoffs |
+| STITCH | Workflow sequencing with built-in templates |
+| VANGUARD | Inbound channel normalization, outbound dispatch |
+| HANDSHAKE | External API connection registry |
+| BELL | Chat sessions and approval response collection |
+| ALMANAC | Component catalog, glossary, runbooks |
+| PRISM | Aggregated system visibility — runs, approvals, blocked, crew |
 
 ---
 
-## SCOUT operator
+## Reliability guarantees — proven by crash tests
 
-SCOUT is an AI-powered lead capture agent. Embed the chat widget on any website — it qualifies visitors, extracts contact details, and scores leads automatically.
-
-```bash
-# Install Scout dependencies
-cd cascadia/operators/scout
-pip install -r requirements.txt
-
-# Start Scout
-python scout_server.py
-
-# Chat widget
-open http://localhost:7000/bell
-
-# Embeddable doorbell (iframe)
-open http://localhost:7000/doorbell
-
-# Lead pipeline
-GET http://localhost:7000/api/leads
-GET http://localhost:7000/api/stats
-```
-
-Scout uses a 3-folder persona system — swap the markdown files to change its personality without touching code:
-
-```
-scouts/lead-engine/
-  job_description/role.md      ← who Scout is
-  company_policy/policy.md     ← what Scout can and cannot say
-  current_task/task.md         ← what Scout is focused on right now
-```
-
----
-
-## RECON operator
-
-RECON is an outbound research agent. Give it a task via `tasks/current/task.md` and it searches, deduplicates, scores, and outputs structured CSV.
-
-```bash
-# Install Recon dependencies
-cd cascadia/operators/recon
-pip install -r requirements.txt
-
-# Start Recon worker + dashboard
-python recon_worker.py &
-python dashboard.py
-
-# Live research dashboard
-open http://localhost:7001/
-```
-
----
-
-## PRISM dashboard
-
-```bash
-open http://127.0.0.1:6300/
-
-GET  http://127.0.0.1:6300/api/prism/overview
-GET  http://127.0.0.1:6300/api/prism/runs
-GET  http://127.0.0.1:6300/api/prism/approvals
-GET  http://127.0.0.1:6300/api/prism/blocked
-GET  http://127.0.0.1:6300/api/prism/crew
-GET  http://127.0.0.1:6300/api/prism/sentinel
-GET  http://127.0.0.1:4011/health
-```
-
----
-
-## Port reference
-
-| Port | Band | Component |
-|---|---|---|
-| 4010 | 4xxx — kernel | ONCE setup wizard (install time only) |
-| 4011 | 4xxx — kernel | FLINT status API |
-| 5100 | 5xxx — foundation | CREW |
-| 5101 | 5xxx — foundation | VAULT |
-| 5102 | 5xxx — foundation | SENTINEL |
-| 5103 | 5xxx — foundation | CURTAIN |
-| 6200 | 6xxx — runtime | BEACON |
-| 6201 | 6xxx — runtime | STITCH |
-| 6202 | 6xxx — runtime | VANGUARD |
-| 6203 | 6xxx — runtime | HANDSHAKE |
-| 6204 | 6xxx — runtime | BELL |
-| 6205 | 6xxx — runtime | ALMANAC |
-| 6300 | 6xxx — visibility | PRISM (dashboard UI + API) |
-| 7000 | 7xxx — operators | SCOUT |
-| 7001 | 7xxx — operators | RECON |
-| 7002+ | 7xxx — operators | future operators |
-| 8200+ | 8xxx — expansion | GRID, DEPOT (roadmap) |
-
----
-
-## Reliability guarantees
+These are tested in `tests/test_crash_recovery.py`. Not just claimed.
 
 | Scenario | Behavior |
 |---|---|
 | Kill operator mid-run | Resumes from last committed step, not step 0 |
+| Crash after side effect declared but not committed | Re-attempts the effect on resume |
 | Crash after side effect committed | Skips the effect — never duplicates |
 | Approval-required run restarted | Stays `waiting_human`, never auto-resumes |
+| Poisoned or complete run | Never resumed under any condition |
 | Multiple crashes in sequence | `retry_count` increments correctly each time |
 
 ---
 
-## What is partial in v0.31
+## What is partial in v0.2
 
-- **SENTINEL** — risk rules work; enforcement hooks into the full operator loop are v0.32
-- **CURTAIN** — HMAC signing works; AES-256-GCM and asymmetric key exchange are v0.32
-- **HANDSHAKE** — connection registry works; actual HTTP execution to external APIs is v0.32
-- **VANGUARD** — normalization works; dynamic operator discovery and real channel adapters are v0.32
-- **PRISM** — aggregation queries work; real-time WebSocket push is v0.32
+Present and registered, but not fully wired end-to-end yet:
+
+- **SENTINEL** — risk rules work; enforcement hooks into the full operator execution loop are v0.3
+- **CURTAIN** — HMAC signing works; AES-256-GCM and asymmetric key exchange are v0.3
+- **HANDSHAKE** — connection registry works; actual HTTP execution to external APIs is v0.3
+- **VANGUARD** — normalization works; real channel adapters (SMTP, SMS) are v0.3
 
 ---
 
 ## Roadmap
 
-### v0.32
-- VANGUARD dynamic operator discovery (scan_operators pattern)
-- SENTINEL enforcement wired end-to-end
-- CURTAIN AES-256-GCM + asymmetric key exchange
-- HANDSHAKE HTTP execution to external APIs
-- PRISM WebSocket real-time push
-- BELL persona routing (operator-specific system prompts)
-- Model switcher in PRISM
-
-### v0.4+
 - GRID — decentralized compute network
 - DEPOT — operator marketplace
 - Scheduler and trigger manager
 - MicroVM operator isolation
 - Multi-node HA
+
+---
+
+## PRISM dashboard
+
+PRISM is the browser-based visibility layer for Cascadia OS. Open `cascadia/dashboard/prism.html` in any browser while Cascadia is running — no build step, no server, no dependencies.
+
+**Features:** Live component status for all 11 services, run timeline with event replay, observability metrics, human approval flow, drag-and-drop Studio, and Admin/audit log. Full documentation in [PRISM_MANUAL.md](./PRISM_MANUAL.md).
+
+**PRISM API** (served by the PRISM component at `:6300`):
+
+```bash
+GET  http://127.0.0.1:6300/api/prism/overview    # Full system snapshot
+GET  http://127.0.0.1:6300/api/prism/system      # FLINT component states
+GET  http://127.0.0.1:6300/api/prism/runs        # Recent run states
+GET  http://127.0.0.1:6300/api/prism/approvals   # Pending human decisions
+GET  http://127.0.0.1:6300/api/prism/blocked     # Runs blocked on dependencies
+GET  http://127.0.0.1:6300/api/prism/crew        # Active operators
+GET  http://127.0.0.1:6300/api/prism/workflows   # STITCH workflows
+POST http://127.0.0.1:6300/api/prism/run         # {run_id} → full run detail
+```
 
 ---
 
@@ -274,15 +194,27 @@ GET  http://127.0.0.1:4011/health
 
 ---
 
-## Docs
+## Why this exists
 
-- [Manual](./MANUAL.md)
-- [Changelog](./CHANGELOG.md)
-- [Contributing](./CONTRIBUTING.md)
-- [Security Policy](./SECURITY.md)
-- [Support](./SUPPORT.md)
-- [Story behind the project](./STORY.md)
+I was five years old the first time I took apart a telephone. Not for school. Because I needed to understand how the sound got through the wire.
+
+Decades later — aerospace engineering in Moscow, automation projects for Amazon and the US Navy, building things at 2am while my daughter slept — I kept running into the same problem: AI that was impressive in demos and unreliable in production.
+
+I didn't want a chatbot. I wanted an operator I could trust. Something that remembers, asks before acting, and picks up where it left off after a crash. Something designed for the moment when things go wrong at three in the morning and nobody is watching.
+
+That's what this is.
+
+→ [Full story](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
 
 ---
 
-*Built in Houston, Texas — [Zyrcon Labs](https://zyrconlabs.com)*
+## Docs
+
+- [Contributing](./CONTRIBUTING.md)
+- [Security Policy](./SECURITY.md)
+- [Support](./SUPPORT.md)
+- [Story behind the project](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
+
+---
+
+*Built in Houston, Texas — [Zyrcon Labs](https://github.com/zyrconlabs)*
