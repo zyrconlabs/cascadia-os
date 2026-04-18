@@ -12,3 +12,5 @@ data/
 
 # OS
 .DS_Store
+cascadia/installer/__pycache__/
+*.pyc
