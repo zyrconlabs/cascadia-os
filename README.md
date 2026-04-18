@@ -218,3 +218,24 @@ That's what this is.
 ---
 
 *Built in Houston, Texas — [Zyrcon Labs](https://github.com/zyrconlabs)*
+
+---
+
+## Operators
+
+Each operator has a job description, policy guardrails, task file, and dashboard.
+
+| Operator | Category | Status | What it does |
+|---|---|---|---|
+| RECON | Intelligence | Production | Autonomous web research, extracts contacts to CSV |
+| SCOUT | Inbound | Production | Chat widget, qualifies leads, routes to workflow |
+| QUOTE | Sales | Production | RFQ to proposal in under 5 minutes |
+| CHIEF | Intelligence | Production | Daily brief synthesizing all operators |
+| Aurelia | Executive | Beta | EA — commitments, priorities, weekly CEO report |
+| Debrief | Sales | Beta | Post-call logger — action items, follow-up drafts |
+| Competition Researcher | Intelligence | Beta | Competitive intel, daily digest |
+| Jr. Programmer | Engineering | Beta | Architecture, code, iterative improvement |
+
+Sample outputs: [samples/](./samples/) — real artifacts from live operators running on Qwen 3B locally.
+
+Operator registry: [cascadia/operators/registry.json](./cascadia/operators/registry.json)
