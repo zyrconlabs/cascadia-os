@@ -468,7 +468,7 @@ const GatewayContract = {
     try {
       const resp = await fetch(GW + '/v1/chat/completions', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({model: model||'zyrcon-ai', messages, stream:true, temperature:0.7, max_tokens:600}),
+        body: JSON.stringify({model: model||S.model||'qwen2.5-3b-instruct-q4_k_m.gguf', messages, stream:true, temperature:0.7, max_tokens:600}),
       });
       const reader = resp.body.getReader(); const decoder = new TextDecoder();
       let full='', buf='', done=false;
@@ -515,7 +515,7 @@ const GatewayContract = {
       {name:'GET /api/status', fn: () => gw('GET','/api/status')},
       {name:'GET /api/operators', fn: () => gw('GET','/api/operators')},
       {name:'GET /api/models', fn: () => gw('GET','/api/models')},
-      {name:'POST /v1/chat/completions', fn: () => fetch(GW+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'zyrcon-ai',messages:[{role:'user',content:'ping'}],max_tokens:1}),signal:AbortSignal.timeout(3000)}).then(r=>r.ok?{ok:true}:null)},
+      {name:'POST /v1/chat/completions', fn: () => fetch(GW+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:S.model||'qwen2.5-3b-instruct-q4_k_m.gguf',messages:[{role:'user',content:'ping'}],max_tokens:1}),signal:AbortSignal.timeout(3000)}).then(r=>r.ok?{ok:true}:null)},
     ];
     const results = [];
     for (const ep of endpoints) {
@@ -533,13 +533,34 @@ async function gw(method, path, body) {
   return null;
 }
 
-/* ═══ MODELS ═══ */
-const MODELS = [
-  {id:'zyrcon-ai', name:'Zyrcon AI', desc:'Default · Local', file:null},
-  {id:'zyrcon-fast', name:'Zyrcon Fast', desc:'Speed optimized', file:'zyrcon-fast.gguf'},
-  {id:'zyrcon-3b', name:'Zyrcon 3B', desc:'Lightweight', file:'zyrcon-3b.gguf'},
-  {id:'cloud-gpt4', name:'GPT-4o', desc:'Cloud · OpenAI', file:null},
+/* ═══ MODELS — loaded dynamically from /api/prism/models ═══ */
+let MODELS = [
+  {id:'qwen2.5-3b', name:'Qwen 2.5 3B', desc:'3B · Fast · Local', file:'qwen2.5-3b-instruct-q4_k_m.gguf'},
+  {id:'qwen2.5-7b', name:'Qwen 2.5 7B', desc:'7B · Balanced · Local', file:'qwen2.5-7b-instruct-q4_k_m.gguf'},
+  {id:'qwen2.5-14b', name:'Qwen 2.5 14B', desc:'14B · Powerful · Local', file:'Qwen2.5-14B-Instruct-Q4_K_M.gguf'},
+  {id:'qwen2.5-vl-7b', name:'Qwen 2.5 VL 7B', desc:'7B · Vision · Local', file:'qwen2.5-vl-7b-instruct-q4_k_m.gguf'},
 ];
+
+async function loadModelsFromPRISM() {
+  try {
+    const data = await prismFetch('/api/prism/models');
+    if (data && Array.isArray(data.models) && data.models.length) {
+      MODELS = data.models.map(m => ({
+        id:   m.id,
+        name: m.name,
+        desc: m.desc || (m.size ? m.size + ' · Local' : 'Local'),
+        file: m.file || m.alias || null,
+      }));
+      // Set active model from config
+      if (data.active_model_id && MODELS.find(m => m.id === data.active_model_id)) {
+        S.model = data.active_model_id;
+      } else if (MODELS.length) {
+        S.model = MODELS[0].id;
+      }
+      if (S.surface === 'ops') renderMain();
+    }
+  } catch(_) {}
+}
 
 /* ═══ WORKER MANIFESTS ═══ */
 const WORKER_MANIFESTS = {
@@ -567,7 +588,7 @@ function isWorker(id) { return !!WORKER_MANIFESTS[id]?.isWorker; }
 /* ═══ STATE ═══ */
 const S = {
   surface:'ops', selected:null, cells:[], messages:{},
-  filter:'', model:'zyrcon-ai', cmdMenuOpen:{}, modelDDOpen:false,
+  filter:'', model:S.model||'qwen2.5-3b-instruct-q4_k_m.gguf', cmdMenuOpen:{}, modelDDOpen:false,
   workerPanelOpen:{}, activity:{}, connected:false,
   approvals:[], runs:{}, selectedRun:null,
   selectedNode:null, studioNodes:null,
@@ -1817,7 +1838,7 @@ function demoDB() {
   }));
 }
 function ensureBeacon() {
-  if(!S.cells.find(c=>c.id==='beacon'))S.cells.unshift({id:'beacon',name:'Beacon',role:'System Orchestrator',status:'active',model:'zyrcon-ai',routing:'100% local',completion:0,hours:0,done:0,total:0,lastAction:'All systems nominal',uptime:'99.9%',files:[],currentTask:'Monitoring all cells',isBeacon:true,isWorker:false});
+  if(!S.cells.find(c=>c.id==='beacon'))S.cells.unshift({id:'beacon',name:'Beacon',role:'System Orchestrator',status:'active',model:S.model||'qwen2.5-3b-instruct-q4_k_m.gguf',routing:'100% local',completion:0,hours:0,done:0,total:0,lastAction:'All systems nominal',uptime:'99.9%',files:[],currentTask:'Monitoring all cells',isBeacon:true,isWorker:false});
   S.cells.sort((a,b)=>a.id==='beacon'?-1:b.id==='beacon'?1:0);
 }
 
@@ -1841,6 +1862,7 @@ renderSidebar(); renderMain(); updateNavBadges();
   await refreshCells();
   setInterval(refreshCells, POLL);
   startLivePoll();
+  loadModelsFromPRISM();
 })();
 </script>
 </body>

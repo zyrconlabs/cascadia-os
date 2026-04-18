@@ -14,6 +14,10 @@ world before anything else in Cascadia OS does.
 # MATURITY: STUB — Inbound normalization and outbound queuing work. Real channel adapters (SMTP, SMS, webhooks) are v0.3.
 from __future__ import annotations
 
+import json
+import urllib.request
+import urllib.error
+
 import argparse
 import threading
 import uuid
@@ -91,6 +95,10 @@ class VanguardService:
         self._inbox: List[InboundMessage] = []            # Recent messages
         self._outbox: List[Dict[str, Any]] = []           # Dispatched messages
 
+        # HANDSHAKE port for outbound dispatch
+        hs_comp = next((c for c in self.config.get('components', []) if c['name'] == 'handshake'), None)
+        self._handshake_port: int | None = hs_comp['port'] if hs_comp else None
+
         # Register built-in channels
         self._register_defaults()
 
@@ -165,12 +173,62 @@ class VanguardService:
     def dispatch_outbound(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         """
         Dispatch an outbound message through a registered channel.
-        Logs and queues outbound messages. Real channel adapters in v0.35.
+        For webhook and email channels: forwards to HANDSHAKE for real execution.
+        For other channels: logs and queues (adapters are v0.43 roadmap).
         """
-        channel = payload.get('channel', 'email')
+        channel   = payload.get('channel', 'webhook')
         recipient = payload.get('recipient', '')
-        content = payload.get('content', '')
-        msg_id = f'out_{uuid.uuid4().hex[:10]}'
+        content   = payload.get('content', '')
+        url       = payload.get('url', '')
+        headers   = payload.get('headers', {})
+        msg_id    = f'out_{uuid.uuid4().hex[:10]}'
+
+        dispatched = False
+        status = 'queued'
+        handshake_result: Dict[str, Any] = {}
+
+        # Forward to HANDSHAKE for real execution on supported channels
+        if self._handshake_port and channel in ('webhook', 'email', 'http'):
+            try:
+                if channel == 'webhook' and url:
+                    body = json.dumps({
+                        'url': url,
+                        'body': {'recipient': recipient, 'content': content,
+                                 **payload.get('body', {})},
+                        'headers': headers,
+                        'operator_id': 'vanguard',
+                    }).encode()
+                elif channel == 'email':
+                    # Route through HANDSHAKE proxy_call with registered email connection
+                    conn_id = payload.get('connection_id', '')
+                    if not conn_id:
+                        status = 'queued'
+                        body = None
+                    else:
+                        body = json.dumps({
+                            'connection_id': conn_id,
+                            'method': 'POST',
+                            'payload': {'to': recipient, 'subject': payload.get('subject', ''),
+                                       'body': content},
+                            'operator_id': 'vanguard',
+                        }).encode()
+                else:
+                    body = None
+
+                if body:
+                    hs_path = '/webhook' if channel == 'webhook' else '/call'
+                    req = urllib.request.Request(
+                        f'http://127.0.0.1:{self._handshake_port}{hs_path}',
+                        data=body, method='POST',
+                        headers={'Content-Type': 'application/json'},
+                    )
+                    with urllib.request.urlopen(req, timeout=8) as r:
+                        handshake_result = json.loads(r.read().decode())
+                        status = handshake_result.get('status', 'completed')
+                        dispatched = True
+            except Exception as exc:
+                self.runtime.logger.warning('VANGUARD dispatch via HANDSHAKE failed: %s', exc)
+                status = 'queued'
 
         record = {
             'message_id': msg_id,
@@ -178,15 +236,21 @@ class VanguardService:
             'recipient': recipient,
             'content': content,
             'dispatched_at': _now(),
-            'status': 'queued',   # v0.3: 'sent' after real dispatch
+            'status': status,
+            'dispatched': dispatched,
+            **(handshake_result if dispatched else {}),
         }
         with self._lock:
             self._outbox.append(record)
             if len(self._outbox) > 200:
                 self._outbox = self._outbox[-200:]
 
-        self.runtime.logger.info('VANGUARD outbound queued: %s via %s to %s', msg_id, channel, recipient)
-        return 202, record
+        self.runtime.logger.info(
+            'VANGUARD outbound %s: %s via %s to %s',
+            status, msg_id, channel, recipient
+        )
+        http_code = 200 if dispatched else 202
+        return http_code, record
 
     def get_inbox(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         with self._lock:

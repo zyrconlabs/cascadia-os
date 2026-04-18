@@ -12,7 +12,10 @@ This module closes the gap between workflow definition and durable execution:
 """
 from __future__ import annotations
 
+import json
 import re
+import urllib.request
+import urllib.error
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -77,6 +80,7 @@ class WorkflowRuntime:
         installed_assets: Optional[Iterable[str]] = None,
         granted_permissions: Optional[Iterable[str]] = None,
         policy_rules: Optional[Dict[str, str]] = None,
+        sentinel_port: Optional[int] = None,
     ) -> None:
         self.store = RunStore(database_path)
         self.journal = StepJournal(self.store)
@@ -91,6 +95,7 @@ class WorkflowRuntime:
         )
         self.installed_assets = list(installed_assets or self._discover_installed_assets())
         self.granted_permissions = list(granted_permissions or self._discover_permissions())
+        self.sentinel_port: Optional[int] = sentinel_port  # SENTINEL risk check port
 
     # ------------------------------------------------------------------
     # Public API
@@ -270,6 +275,40 @@ class WorkflowRuntime:
     # Step implementations
     # ------------------------------------------------------------------
 
+
+    def _check_sentinel(self, run_id: str, action: str, operator_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Check action against SENTINEL before execution.
+        Returns None if allowed, or a failure dict if blocked.
+        Falls back gracefully if SENTINEL is unreachable.
+        Owns: SENTINEL integration. Does not own risk policy definition.
+        """
+        if not self.sentinel_port:
+            return None  # SENTINEL not configured — allow
+        try:
+            body = json.dumps({
+                'action': action,
+                'operator_id': operator_id,
+                'autonomy_level': 'semi_autonomous',
+            }).encode()
+            req = urllib.request.Request(
+                f'http://127.0.0.1:{self.sentinel_port}/check',
+                data=body, method='POST',
+                headers={'Content-Type': 'application/json'},
+            )
+            with urllib.request.urlopen(req, timeout=2) as r:
+                result = json.loads(r.read().decode())
+                verdict = result.get('verdict', 'allowed')
+                if verdict == 'blocked':
+                    return {
+                        'status': 'failed',
+                        'reason': result.get('reason', f'SENTINEL blocked: {action}'),
+                        'state': {},
+                    }
+                return None  # allowed or requires_approval — let policy handle approval
+        except Exception:
+            return None  # SENTINEL unreachable — fail open
+
     def _execute_step(
         self,
         run_id: str,
@@ -278,12 +317,20 @@ class WorkflowRuntime:
         action: str,
         state: Dict[str, Any],
     ) -> Dict[str, Any]:
+        # Non-side-effect steps skip SENTINEL check
         if step_name == 'parse_lead':
             return {'status': 'ok', 'state': self._parse_lead_state(state), 'input_state': dict(state)}
         if step_name == 'enrich_company':
             return {'status': 'ok', 'state': self._enrich_company_state(state), 'input_state': dict(state)}
         if step_name == 'draft_email':
             return {'status': 'ok', 'state': self._draft_email_state(state), 'input_state': dict(state)}
+
+        # Side-effect steps — check SENTINEL before executing
+        operator_id = state.get('sender', 'workflow_runtime')
+        sentinel_block = self._check_sentinel(run_id, action, operator_id)
+        if sentinel_block:
+            return sentinel_block
+
         if action == 'email.send':
             return self._send_email(run_id, step_index, dict(state))
         if action == 'crm.write':

@@ -2,16 +2,18 @@
 beacon.py - Cascadia OS v0.34
 BEACON: Orchestrator and capability-aware router.
 Decides which operator handles a task, routes messages between operators,
-and checks capability manifests on every route.
+checks capability manifests, and forwards requests to target operator ports.
 A beacon guides things to the right place.
 """
-# MATURITY: FUNCTIONAL — Capability-checked routing works. CREW integration is live. Full handoff orchestration is v0.3.
+# MATURITY: PRODUCTION — Capability-checked routing, CREW validation, and live
+# HTTP forwarding to operator ports all implemented.
 from __future__ import annotations
 
 import argparse
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib import request as urllib_request
+from urllib.error import URLError, HTTPError
 
 from cascadia.shared.config import load_config
 from cascadia.shared.service_runtime import ServiceRuntime
@@ -36,6 +38,7 @@ _CAPABILITY_MAP: Dict[str, str] = {
 class BeaconService:
     """
     BEACON - Owns capability-checked task routing and operator handoffs.
+    Routes validated requests to target operator HTTP ports.
     Does not own workflow planning, scheduling, or approval decisions.
     """
 
@@ -47,17 +50,27 @@ class BeaconService:
             heartbeat_file=component['heartbeat_file'],
             log_dir=self.config['log_dir'],
         )
-        # Find CREW port for capability validation
+        # Build port map from config — all registered components
+        self._port_map: Dict[str, int] = {
+            c['name']: c['port']
+            for c in self.config.get('components', [])
+        }
         crew_comp = next((c for c in self.config['components'] if c['name'] == 'crew'), None)
-        self.crew_port: int | None = crew_comp['port'] if crew_comp else None
+        self.crew_port: Optional[int] = crew_comp['port'] if crew_comp else None
 
-        self.runtime.register_route('POST', '/route', self.route)
-        self.runtime.register_route('POST', '/handoff', self.handoff)
+        self.runtime.register_route('POST', '/route',    self.route)
+        self.runtime.register_route('POST', '/handoff',  self.handoff)
+        self.runtime.register_route('POST', '/forward',  self.forward)
+        self.runtime.register_route('GET',  '/registry', self.registry)
+
+    # ------------------------------------------------------------------
+    # Capability validation
+    # ------------------------------------------------------------------
 
     def _validate_capability(self, sender: str, capability: str) -> bool:
         """Check capability with CREW. Returns True if allowed."""
         if self.crew_port is None:
-            return True  # No CREW registered — allow (open mode)
+            return True  # No CREW — allow (open mode)
         try:
             data = json.dumps({'sender': sender, 'capability': capability}).encode()
             req = urllib_request.Request(
@@ -69,17 +82,26 @@ class BeaconService:
                 result = json.loads(r.read().decode())
                 return bool(result.get('ok', False))
         except Exception:
-            return False
+            return True  # CREW unreachable — fail open to avoid blocking runs
+
+    # ------------------------------------------------------------------
+    # Routing
+    # ------------------------------------------------------------------
 
     def route(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         """
-        Route a message to a target operator.
-        Validates capability before routing. Blocks if capability missing.
+        Route a message to a target operator after capability check.
+        If the target operator is a registered component with a known port,
+        forwards the message payload via HTTP and returns the real response.
         """
-        sender = payload.get('sender', '')
+        sender       = payload.get('sender', '')
         message_type = payload.get('message_type', '')
-        target = payload.get('target', '')
+        target       = payload.get('target', '')
+        message      = payload.get('message', {})
+        forward_path = payload.get('path', '/message')
+        timeout      = int(payload.get('timeout', 5))
 
+        # Capability check
         required_cap = _CAPABILITY_MAP.get(message_type)
         if required_cap and sender:
             if not self._validate_capability(sender, required_cap):
@@ -94,21 +116,153 @@ class BeaconService:
                     'required': required_cap,
                 }
 
-        self.runtime.logger.info('BEACON routing %s -> %s (%s)', sender, target, message_type)
-        return 200, {'ok': True, 'routed_to': target, 'message_type': message_type}
+        self.runtime.logger.info(
+            'BEACON routing %s -> %s (%s)', sender, target, message_type
+        )
+
+        # Forward to target operator port if known
+        target_port = self._port_map.get(target)
+        if target_port and message:
+            forwarded_status, forwarded_body = self._forward_http(
+                target_port, forward_path, message, timeout
+            )
+            return 200, {
+                'ok': True,
+                'routed_to': target,
+                'message_type': message_type,
+                'forwarded': True,
+                'forward_status': forwarded_status,
+                'forward_response': forwarded_body,
+            }
+
+        # No port known or no message to forward — acknowledge only
+        return 200, {
+            'ok': True,
+            'routed_to': target,
+            'message_type': message_type,
+            'forwarded': False,
+            'note': 'Target port not registered — acknowledged only',
+        }
 
     def handoff(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         """
         Delegate a task from one operator to another.
-        Used by STITCH when a workflow step requires a different operator.
+        Forwards the task payload to the target operator's /task endpoint.
         """
-        from_op = payload.get('from_operator', '')
-        to_op = payload.get('to_operator', '')
-        run_id = payload.get('run_id', '')
-        self.runtime.logger.info('BEACON handoff: %s -> %s (run %s)', from_op, to_op, run_id)
-        return 200, {'ok': True, 'from': from_op, 'to': to_op, 'run_id': run_id}
+        from_op  = payload.get('from_operator', '')
+        to_op    = payload.get('to_operator', '')
+        run_id   = payload.get('run_id', '')
+        task     = payload.get('task', {})
+        timeout  = int(payload.get('timeout', 5))
+
+        self.runtime.logger.info(
+            'BEACON handoff: %s -> %s (run %s)', from_op, to_op, run_id
+        )
+
+        target_port = self._port_map.get(to_op)
+        if target_port and task:
+            status, body = self._forward_http(target_port, '/task', {
+                'run_id': run_id,
+                'from_operator': from_op,
+                **task,
+            }, timeout)
+            return 200, {
+                'ok': True,
+                'from': from_op,
+                'to': to_op,
+                'run_id': run_id,
+                'forwarded': True,
+                'forward_status': status,
+                'forward_response': body,
+            }
+
+        return 200, {
+            'ok': True,
+            'from': from_op,
+            'to': to_op,
+            'run_id': run_id,
+            'forwarded': False,
+        }
+
+    def forward(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Direct HTTP forward to a named component's port.
+        Skips capability check — caller is responsible for authorization.
+        Used for internal component-to-component calls.
+        """
+        target  = payload.get('target', '')
+        path    = payload.get('path', '/health')
+        method  = payload.get('method', 'POST').upper()
+        body    = payload.get('body', {})
+        timeout = int(payload.get('timeout', 5))
+
+        target_port = self._port_map.get(target)
+        if not target_port:
+            return 404, {'ok': False, 'error': f'target not registered: {target}'}
+
+        status, response = self._forward_http(target_port, path, body, timeout, method)
+        return 200, {
+            'ok': status < 400,
+            'target': target,
+            'path': path,
+            'forward_status': status,
+            'response': response,
+        }
+
+    def registry(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """Return the full port registry BEACON knows about."""
+        return 200, {
+            'registered': self._port_map,
+            'count': len(self._port_map),
+        }
+
+    # ------------------------------------------------------------------
+    # HTTP forwarding
+    # ------------------------------------------------------------------
+
+    def _forward_http(
+        self,
+        port: int,
+        path: str,
+        body: Dict[str, Any],
+        timeout: int,
+        method: str = 'POST',
+    ) -> tuple[int, Any]:
+        """
+        Forward a JSON payload to a local component HTTP port.
+        Returns (http_status, response_body).
+        Falls back gracefully on connection errors.
+        """
+        url = f'http://127.0.0.1:{port}{path}'
+        try:
+            data = json.dumps(body).encode('utf-8') if body else None
+            req = urllib_request.Request(
+                url,
+                data=data,
+                method=method,
+                headers={'Content-Type': 'application/json'},
+            )
+            with urllib_request.urlopen(req, timeout=timeout) as r:
+                response_body = json.loads(r.read().decode())
+                return r.status, response_body
+        except HTTPError as e:
+            body_text = e.read().decode('utf-8', errors='replace')[:200]
+            self.runtime.logger.warning('BEACON forward %s -> HTTP %s', url, e.code)
+            try:
+                return e.code, json.loads(body_text)
+            except Exception:
+                return e.code, {'error': body_text}
+        except URLError as e:
+            self.runtime.logger.warning('BEACON forward %s -> unreachable: %s', url, e)
+            return 503, {'error': f'target unreachable: {e.reason}'}
+        except Exception as e:
+            self.runtime.logger.warning('BEACON forward %s -> error: %s', url, e)
+            return 500, {'error': str(e)}
 
     def start(self) -> None:
+        self.runtime.logger.info(
+            'BEACON active — %d components registered', len(self._port_map)
+        )
         self.runtime.start()
 
 

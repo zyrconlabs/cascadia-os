@@ -84,6 +84,7 @@ class PrismService:
         self.runtime.register_route('GET',  '/api/prism/workflows',   self.workflow_list)
         self.runtime.register_route('GET',  '/api/prism/sentinel',    self.sentinel_status)
         self.runtime.register_route('POST', '/api/prism/approve',    self.approve_action)
+        self.runtime.register_route('GET',  '/api/prism/models',     self.models_list)
         self.runtime.register_route('GET',  '/api/prism/operators',  self.operator_status)
 
     # ------------------------------------------------------------------
@@ -304,6 +305,39 @@ class PrismService:
             "generated_at": _now(),
         }
 
+
+
+    def models_list(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Return model list from config.
+        PRISM reads models directly from config.json so the dashboard
+        always reflects what is actually configured — no hardcoding.
+        """
+        models = self.config.get('models', [])
+        llm = self.config.get('llm', {})
+        active_id = llm.get('active_model_id', '')
+
+        # If no models in config, return a sensible default
+        if not models:
+            models = [{
+                'id': 'default',
+                'name': llm.get('model', 'Local Model'),
+                'file': llm.get('model', ''),
+                'alias': llm.get('model', ''),
+                'desc': 'Configured model · Local',
+                'size': '—',
+                'context': 4096,
+                'recommended_for': 'all tasks',
+            }]
+
+        return 200, {
+            'models': models,
+            'active_model_id': active_id or (models[0]['id'] if models else ''),
+            'llm_base_url': llm.get('base_url', 'http://127.0.0.1:8080'),
+            'llm_provider': llm.get('provider', 'llamacpp'),
+            'count': len(models),
+            'generated_at': _now(),
+        }
 
     def approve_action(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         """
