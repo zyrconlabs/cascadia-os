@@ -34,6 +34,7 @@ from urllib import request as urllib_request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from cascadia import VERSION_SHORT
 from cascadia.kernel.flint import Flint, ProcessEntry
 from cascadia.shared.config import load_config
 
@@ -250,7 +251,7 @@ class TestFlintStatusServer(unittest.TestCase):
     def test_status_endpoint_returns_version(self) -> None:
         result = _http_get(self.port, '/api/flint/status')
         self.assertIsNotNone(result)
-        self.assertEqual(result.get('version'), '0.43')
+        self.assertEqual(result.get('version'), VERSION_SHORT)
         self.assertEqual(result.get('component'), 'flint')
         self.assertIn('components', result)
 
@@ -404,7 +405,7 @@ class TestFlintSubprocess(unittest.TestCase):
         result = _http_get(self.STATUS_PORT, '/api/flint/status')
         self.assertIsNotNone(result)
         self.assertEqual(result.get('components'), [])
-        self.assertEqual(result.get('version'), '0.43')
+        self.assertEqual(result.get('version'), VERSION_SHORT)
 
     def test_flint_terminates_cleanly_on_sigterm(self) -> None:
         """FLINT receives SIGTERM and exits within drain timeout."""
