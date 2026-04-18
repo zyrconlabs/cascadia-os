@@ -494,14 +494,51 @@ def _row_hash(row: dict) -> str:
     ])
     return hashlib.md5(key.encode()).hexdigest()
 
+# ── Hallucination indicators ─────────────────────────────────────────────────
+_FAKE_NAMES    = {"john doe", "jane doe", "jane smith", "john smith",
+                  "test user", "example user", "first last", "name here"}
+_FAKE_PHONES   = {"555-1234", "555-5678", "555-0000", "555-1111",
+                  "123-456-7890", "000-000-0000", "(555)"}
+_FAKE_EMAIL_PATTERNS = ["john.doe@", "jane.smith@", "john.smith@",
+                         "jane.doe@", "test@", "example@", "user@example",
+                         "@example.com", "@test.com"]
+_FAKE_LINKEDIN = {"https://www.linkedin.com/in/johndoe",
+                  "https://www.linkedin.com/in/janesmith",
+                  "https://www.linkedin.com/in/johnsmith"}
+
+def _is_hallucinated(row: dict) -> bool:
+    """Return True if this record looks like a hallucinated placeholder."""
+    name  = str(row.get("full_name", "")).strip().lower()
+    phone = str(row.get("phone", "")).strip()
+    email = str(row.get("email", "")).strip().lower()
+    li    = str(row.get("linkedin", "")).strip()
+
+    if name in _FAKE_NAMES:
+        return True
+    if any(phone.startswith(fp) or fp in phone for fp in _FAKE_PHONES):
+        return True
+    if any(pat in email for pat in _FAKE_EMAIL_PATTERNS):
+        return True
+    if li in _FAKE_LINKEDIN:
+        return True
+    # Reject records with no real name or company
+    if not name or not row.get("company", "").strip():
+        return True
+    return False
+
+
 def validate_rows(raw: list, state: dict) -> list[dict]:
-    """Deduplicate and filter low-confidence records."""
+    """Deduplicate, filter low-confidence, and reject hallucinated records."""
     seen = set(state.get("seen_hashes", []))
     clean = []
     for row in raw:
         if not isinstance(row, dict):
             continue
         if str(row.get("confidence", "low")).lower() == "low":
+            continue
+        if _is_hallucinated(row):
+            log.debug("Hallucination rejected: %s / %s",
+                      row.get("full_name"), row.get("email"))
             continue
         h = _row_hash(row)
         if h in seen:
