@@ -10,7 +10,39 @@ Decades later — aerospace engineering in Moscow, automation projects for Amazo
 
 I didn't want a chatbot. I wanted an operator I could trust. Something that remembers, asks before acting, and picks up where it left off after a crash. Something designed for the moment when things go wrong at three in the morning and nobody is watching.
 
-**That's what this is.** → [Full story](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
+**That's what this is.** → [Full story](./STORY.md)
+
+---
+
+## ⚡ One-Command Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zyrconlabs/cascadia-os/main/install.sh | bash
+```
+
+Installs Homebrew (if needed), SwiftBar, Cascadia OS, registers a login agent, and links the menu bar controller. Everything starts automatically at boot. No manual steps.
+
+> **Requires:** Python 3.11+ and git. Everything else is handled automatically.
+
+→ [Full quickstart guide](./QUICKSTART.md)
+
+---
+
+## 🎬 Run the Demo
+
+After installing, run the investor demo — ~90 seconds end-to-end:
+
+```bash
+bash demo.sh
+```
+
+**What you'll see:**
+1. Lead arrives → workflow starts automatically
+2. System classifies, enriches, drafts a response
+3. Approval gate fires — email held until a human approves
+4. **System crashes mid-run** (deliberate)
+5. Restarts — resumes from exact same step, zero duplication
+6. Approval given → email sent → CRM logged → complete
 
 ---
 
@@ -19,7 +51,7 @@ I didn't want a chatbot. I wanted an operator I could trust. Something that reme
 **One-click install — done in under a minute:**
 ![Install](./assets/install.png)
 
-**Watchdog running — all 11 components healthy:**
+**Watchdog running — all 13 components healthy:**
 ![Watchdog](./assets/watchdog.png)
 
 **PRISM dashboard — live system status:**
@@ -30,46 +62,16 @@ I didn't want a chatbot. I wanted an operator I could trust. Something that reme
 
 ---
 
-Most AI tools are impressive in demos. They forget context, act without guardrails, and collapse when a workflow spans more than one session.
+## Real operator outputs
 
-Cascadia OS is built to a different standard — durable enough to survive crashes, supervised enough to ask before taking sensitive actions, and honest enough to tell you exactly what it can and can't do.
+These were generated on a MacBook Air M1, Qwen 3B via llama.cpp. No cloud API.
 
----
-
-## ⚡ One-Click Install
-
-**Mac / Linux:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Zyrconlabs/cascadia-os/main/install.sh | bash
-```
-
-**Windows** — in PowerShell:
-```powershell
-irm https://raw.githubusercontent.com/Zyrconlabs/cascadia-os/main/install.bat -OutFile install.bat; .\install.bat
-```
-
-> **Requires:** Python 3.11+ and git
-
-The installer clones the repo, creates a virtual environment, installs the package, copies your config, runs first-time setup, and adds a `cascadia` launcher to your PATH.
-
----
-
-## Manual Start
-
-```bash
-# First-time setup
-python -m cascadia.installer.once          # Opens browser setup wizard at http://127.0.0.1:18780
-python -m cascadia.installer.once --no-browser  # Terminal fallback
-
-# Start the OS (watchdog keeps FLINT alive)
-python -m cascadia.kernel.watchdog --config config.json
-
-# Run all tests
-python -m unittest discover -s tests -v
-
-# Run crash and recovery drills
-python tests/test_crash_recovery.py
-```
+| Output | What it shows |
+|---|---|
+| [Houston warehouse leads](./samples/recon-houston-warehouse-leads-2026-04-18.csv) | RECON — 25+ search cycles, hallucination-filtered |
+| [Gulf Coast Logistics proposal](./samples/proposal-Gulf-Coast-Logistics-2026-04-18.md) | Full proposal from one-paragraph RFQ in 30 seconds |
+| [Morning brief](./samples/chief-brief-2026-04-18.md) | CHIEF — 90-second executive brief from live operator data |
+| [Post-call debrief](./samples/debrief-gulf-coast-logistics-2026-04-18.md) | Action items and follow-up draft from raw call notes |
 
 ---
 
@@ -85,13 +87,13 @@ Cascadia OS coordinates AI operators that:
 
 ---
 
-## What is working right now
+## Architecture
 
 ### Control plane
 | Module | What it does |
 |---|---|
-| FLINT `kernel/flint.py` | Process supervision, tiered startup, health polling, restart/backoff, graceful shutdown |
-| Watchdog `kernel/watchdog.py` | External FLINT liveness monitor — lives outside the supervision tree |
+| FLINT | Process supervision, tiered startup, health polling, restart/backoff |
+| Watchdog | External FLINT liveness monitor — lives outside the supervision tree |
 
 ### Durability layer
 | Module | What it does |
@@ -100,86 +102,69 @@ Cascadia OS coordinates AI operators that:
 | step_journal | Append-only step log — source of truth for resume |
 | resume_manager | Safe resume-point calculation from committed steps |
 | idempotency | SHA-256 keyed side effect records, UNIQUE DB constraint |
-| migration | Idempotent schema migration, handles legacy DB upgrades |
-
-### Policy and approvals
-| Module | What it does |
-|---|---|
-| runtime_policy | allow / deny / approval_required per action type |
-| approval_store | Persists approval requests and decisions, wakes blocked runs |
-| dependency_manager | Detects missing operators and permissions, writes blocked state |
 
 ### Named components
-| Name | What it does |
-|---|---|
-| CREW | Operator group registry with wildcard capability validation |
-| VAULT | Durable SQLite-backed memory, capability-gated |
-| SENTINEL | Risk classification: low / medium / high / critical per action |
-| CURTAIN | HMAC-SHA256 envelope signing and field encryption (stdlib only) |
-| BEACON | Capability-checked routing and operator handoffs |
-| STITCH | Workflow sequencing with built-in templates |
-| VANGUARD | Inbound channel normalization, outbound dispatch |
-| HANDSHAKE | External API connection registry |
-| BELL | Chat sessions and approval response collection |
-| ALMANAC | Component catalog, glossary, runbooks |
-| PRISM | Aggregated system visibility — runs, approvals, blocked, crew |
+| Name | Port | What it does |
+|---|---|---|
+| CREW | 5100 | Operator registry with wildcard capability validation |
+| VAULT | 5101 | Durable SQLite-backed memory, CREW-validated access |
+| SENTINEL | 5102 | Risk classification per action type |
+| CURTAIN | 5103 | AES-256-GCM field encryption, HMAC-SHA256 signing |
+| BEACON | 6200 | Capability-checked routing and operator handoffs |
+| STITCH | 6201 | Workflow sequencing with built-in templates |
+| VANGUARD | 6202 | Inbound channel normalization, outbound dispatch |
+| HANDSHAKE | 6203 | External API connection registry |
+| BELL | 6204 | Chat sessions, workflow execution, approval collection |
+| ALMANAC | 6205 | Component catalog, glossary, runbooks |
+| PRISM | 6300 | Live system visibility — runs, approvals, operators |
 
 ---
 
-## Reliability guarantees — proven by crash tests
+## Reliability guarantees
 
-These are tested in `tests/test_crash_recovery.py`. Not just claimed.
+Tested in `tests/test_crash_recovery.py`. Not just claimed.
 
 | Scenario | Behavior |
 |---|---|
 | Kill operator mid-run | Resumes from last committed step, not step 0 |
-| Crash after side effect declared but not committed | Re-attempts the effect on resume |
-| Crash after side effect committed | Skips the effect — never duplicates |
+| Crash after side effect declared but not committed | Re-attempts on resume |
+| Crash after side effect committed | Skips — never duplicates |
 | Approval-required run restarted | Stays `waiting_human`, never auto-resumes |
-| Poisoned or complete run | Never resumed under any condition |
 | Multiple crashes in sequence | `retry_count` increments correctly each time |
 
 ---
 
-## What is partial in v0.2
+## PRISM Dashboard
 
-Present and registered, but not fully wired end-to-end yet:
+Open `http://localhost:6300/` while Cascadia is running.
 
-- **SENTINEL** — risk rules work; enforcement hooks into the full operator execution loop are v0.3
-- **CURTAIN** — HMAC signing works; AES-256-GCM and asymmetric key exchange are v0.3
-- **HANDSHAKE** — connection registry works; actual HTTP execution to external APIs is v0.3
-- **VANGUARD** — normalization works; real channel adapters (SMTP, SMS) are v0.3
+**Surfaces:** Live operator status · Run timeline · Approvals · Observability · Studio · Admin
 
----
-
-## Roadmap
-
-- GRID — decentralized compute network
-- DEPOT — operator marketplace
-- Scheduler and trigger manager
-- MicroVM operator isolation
-- Multi-node HA
-
----
-
-## PRISM dashboard
-
-PRISM is the browser-based visibility layer for Cascadia OS. Open `cascadia/dashboard/prism.html` in any browser while Cascadia is running — no build step, no server, no dependencies.
-
-**Features:** Live component status for all 11 services, run timeline with event replay, observability metrics, human approval flow, drag-and-drop Studio, and Admin/audit log. Full documentation in [PRISM_MANUAL.md](./PRISM_MANUAL.md).
-
-**PRISM API** (served by the PRISM component at `:6300`):
-
+**API:**
 ```bash
-GET  http://127.0.0.1:6300/api/prism/overview    # Full system snapshot
-GET  http://127.0.0.1:6300/api/prism/system      # FLINT component states
-GET  http://127.0.0.1:6300/api/prism/runs        # Recent run states
-GET  http://127.0.0.1:6300/api/prism/approvals   # Pending human decisions
-GET  http://127.0.0.1:6300/api/prism/blocked     # Runs blocked on dependencies
-GET  http://127.0.0.1:6300/api/prism/crew        # Active operators
-GET  http://127.0.0.1:6300/api/prism/workflows   # STITCH workflows
-POST http://127.0.0.1:6300/api/prism/run         # {run_id} → full run detail
+GET  :6300/api/prism/overview    # Full system snapshot
+GET  :6300/api/prism/runs        # Live run states  
+GET  :6300/api/prism/approvals   # Pending human decisions
+POST :6300/api/prism/approve     # Approve or deny a gated action
+GET  :6300/api/prism/crew        # Active operators
 ```
+
+Full documentation: [PRISM_MANUAL.md](./PRISM_MANUAL.md)
+
+---
+
+## Operators
+
+| Operator | Category | Status | What it does |
+|---|---|---|---|
+| RECON | Intelligence | Production | Autonomous web research, extracts contacts to CSV |
+| SCOUT | Inbound | Production | Chat widget, qualifies leads, routes to workflow |
+| QUOTE | Sales | Production | RFQ to proposal in under 5 minutes |
+| CHIEF | Intelligence | Production | Daily brief synthesizing all operators |
+| Aurelia | Executive | Beta | EA — commitments, priorities, weekly CEO report |
+| Debrief | Sales | Beta | Post-call logger — action items, follow-up drafts |
+
+Operator registry: [cascadia/operators/registry.json](./cascadia/operators/registry.json)
 
 ---
 
@@ -194,48 +179,15 @@ POST http://127.0.0.1:6300/api/prism/run         # {run_id} → full run detail
 
 ---
 
-## Why this exists
-
-I was five years old the first time I took apart a telephone. Not for school. Because I needed to understand how the sound got through the wire.
-
-Decades later — aerospace engineering in Moscow, automation projects for Amazon and the US Navy, building things at 2am while my daughter slept — I kept running into the same problem: AI that was impressive in demos and unreliable in production.
-
-I didn't want a chatbot. I wanted an operator I could trust. Something that remembers, asks before acting, and picks up where it left off after a crash. Something designed for the moment when things go wrong at three in the morning and nobody is watching.
-
-That's what this is.
-
-→ [Full story](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
-
----
-
 ## Docs
 
+- [Quickstart](./QUICKSTART.md)
+- [Manual](./MANUAL.md)
+- [PRISM Manual](./PRISM_MANUAL.md)
 - [Contributing](./CONTRIBUTING.md)
 - [Security Policy](./SECURITY.md)
-- [Support](./SUPPORT.md)
-- [Story behind the project](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
+- [Story behind the project](./STORY.md)
 
 ---
 
 *Built in Houston, Texas — [Zyrcon Labs](https://github.com/zyrconlabs)*
-
----
-
-## Operators
-
-Each operator has a job description, policy guardrails, task file, and dashboard.
-
-| Operator | Category | Status | What it does |
-|---|---|---|---|
-| RECON | Intelligence | Production | Autonomous web research, extracts contacts to CSV |
-| SCOUT | Inbound | Production | Chat widget, qualifies leads, routes to workflow |
-| QUOTE | Sales | Production | RFQ to proposal in under 5 minutes |
-| CHIEF | Intelligence | Production | Daily brief synthesizing all operators |
-| Aurelia | Executive | Beta | EA — commitments, priorities, weekly CEO report |
-| Debrief | Sales | Beta | Post-call logger — action items, follow-up drafts |
-| Competition Researcher | Intelligence | Beta | Competitive intel, daily digest |
-| Jr. Programmer | Engineering | Beta | Architecture, code, iterative improvement |
-
-Sample outputs: [samples/](./samples/) — real artifacts from live operators running on Qwen 3B locally.
-
-Operator registry: [cascadia/operators/registry.json](./cascadia/operators/registry.json)

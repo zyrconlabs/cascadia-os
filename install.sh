@@ -21,7 +21,7 @@ die()     { echo -e "${RED}[cascadia] ERROR:${NC} $*" >&2; exit 1; }
 
 echo ""
 echo "  ╔══════════════════════════════════════╗"
-echo "  ║       Cascadia OS v0.34 Installer     ║"
+echo "  ║       Cascadia OS v0.40 Installer     ║"
 echo "  ╚══════════════════════════════════════╝"
 echo ""
 

@@ -52,29 +52,9 @@ else
     ps aux | grep -q "[r]econ_worker" && echo "✓ RECON worker running" || echo "✗ RECON failed"
 fi
 
-# ── 4. QUOTE operator ─────────────────────────────────────────────────────
-if curl -sf http://127.0.0.1:8007/api/health > /dev/null 2>&1; then
-    echo "✓ QUOTE already running"
-else
-    echo "▸ Starting QUOTE..."
-    cd "$HOME/operators/QUOTE"
-    python3 dashboard.py >> "$REPO/data/logs/quote.log" 2>&1 &
-    cd "$REPO"
-    sleep 3
-    curl -sf http://127.0.0.1:8007/api/health > /dev/null && echo "✓ QUOTE ready" || echo "✗ QUOTE failed"
-fi
-
-# ── 5. CHIEF operator ─────────────────────────────────────────────────────
-if curl -sf http://127.0.0.1:8006/api/health > /dev/null 2>&1; then
-    echo "✓ CHIEF already running"
-else
-    echo "▸ Starting CHIEF..."
-    cd "$HOME/operators/CHIEF"
-    python3 dashboard.py >> "$REPO/data/logs/chief.log" 2>&1 &
-    cd "$REPO"
-    sleep 3
-    curl -sf http://127.0.0.1:8006/api/health > /dev/null && echo "✓ CHIEF ready" || echo "✗ CHIEF failed"
-fi
+# ── 4. Additional operators (optional) ────────────────────────────────────
+# Add your own operators here. Example:
+# cd "$HOME/operators/MY_OPERATOR" && python3 dashboard.py >> "$REPO/data/logs/my_operator.log" 2>&1 &
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"

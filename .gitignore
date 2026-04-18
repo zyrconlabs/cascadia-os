@@ -3,8 +3,9 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+venv/
 
-# Cascadia runtime
+# Cascadia runtime — generated, never commit
 config.json
 data/
 *.heartbeat
@@ -12,5 +13,12 @@ data/
 
 # OS
 .DS_Store
-cascadia/installer/__pycache__/
-*.pyc
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+build/
