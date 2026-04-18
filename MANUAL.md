@@ -1,4 +1,4 @@
-# Cascadia OS v0.31 — Manual
+# Cascadia OS v0.34 — Manual
 
 ## What changed in v0.31
 
@@ -225,10 +225,10 @@ python tests/test_crash_recovery.py
 
 ## Not in v0.31
 
-- VANGUARD dynamic operator discovery (v0.32)
-- SENTINEL enforcement end-to-end (v0.32)
-- CURTAIN AES-256-GCM / asymmetric key exchange (v0.32)
-- HANDSHAKE HTTP execution to external APIs (v0.32)
-- PRISM WebSocket real-time push (v0.32)
-- BELL persona routing (v0.32)
-- Model switcher in PRISM (v0.32)
+- VANGUARD dynamic operator discovery (v0.35)
+- SENTINEL enforcement end-to-end (v0.35)
+- CURTAIN asymmetric key exchange (v0.35)
+- HANDSHAKE HTTP execution to external APIs (v0.35)
+- PRISM WebSocket real-time push (v0.35)
+- BELL persona routing (v0.35)
+- Model switcher in PRISM (v0.35)

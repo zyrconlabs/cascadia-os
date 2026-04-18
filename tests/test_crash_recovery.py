@@ -1,5 +1,5 @@
 """
-tests/test_crash_recovery.py - Cascadia OS v0.2
+tests/test_crash_recovery.py - Cascadia OS v0.34
 Failure drills. These test what matters most:
 
   1. Kill mid-run -> restart -> resume from last committed step (not step 0)
@@ -475,7 +475,7 @@ class TestDependencyBlocking(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    print('\n=== Cascadia OS v0.2 — Crash Recovery & Failure Drills ===\n')
+    print('\n=== Cascadia OS v0.34 — Crash Recovery & Failure Drills ===\n')
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for cls in [TestKillAndResume, TestDuplicatePrevention,

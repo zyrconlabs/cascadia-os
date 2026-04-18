@@ -1,5 +1,5 @@
 """
-tests/test_v02.py - Cascadia OS v0.2
+tests/test_v02.py - Cascadia OS v0.34
 Full integration test suite covering all named components.
 """
 from __future__ import annotations
@@ -465,7 +465,7 @@ class TestBell(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Manifest tests (v2.1 + v0.2 operator names)
+# Manifest tests (operator manifest validation)
 # ---------------------------------------------------------------------------
 
 class TestManifests(unittest.TestCase):
@@ -576,7 +576,7 @@ class TestDurabilityIntegration(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print('\n=== Cascadia OS v0.2 — Full Test Suite ===\n')
+    print('\n=== Cascadia OS v0.34 — Full Test Suite ===\n')
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for cls in [

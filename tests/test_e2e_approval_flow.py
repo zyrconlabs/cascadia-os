@@ -1,5 +1,5 @@
 """
-tests/test_e2e_approval_flow.py - Cascadia OS v0.2
+tests/test_e2e_approval_flow.py - Cascadia OS v0.34
 # MATURITY: PRODUCTION — End-to-end approval flow tests under restart conditions.
 
 Proves the complete lifecycle for approval-gated runs:
@@ -397,7 +397,7 @@ class TestBlockedToResumedFlow(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    print('\n=== Cascadia OS v0.2 — End-to-End Approval & Dependency Flow Tests ===\n')
+    print('\n=== Cascadia OS v0.34 — End-to-End Approval & Dependency Flow Tests ===\n')
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for cls in [TestApprovalFlowComplete, TestBlockedToResumedFlow]:

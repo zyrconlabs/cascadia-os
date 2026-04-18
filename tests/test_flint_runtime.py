@@ -1,5 +1,5 @@
 """
-tests/test_flint_runtime.py - Cascadia OS v0.2
+tests/test_flint_runtime.py - Cascadia OS v0.34
 # MATURITY: PRODUCTION — Live subprocess crash drills for FLINT and watchdog.
 
 Tests FLINT supervision behavior using real subprocesses — not mocks.
@@ -434,7 +434,7 @@ class TestFlintSubprocess(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    print('\n=== Cascadia OS v0.2 — FLINT Runtime Drills ===\n')
+    print('\n=== Cascadia OS v0.34 — FLINT Runtime Drills ===\n')
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for cls in [

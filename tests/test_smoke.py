@@ -1,5 +1,5 @@
 """
-tests/test_smoke.py - Cascadia OS v0.2
+tests/test_smoke.py - Cascadia OS v0.34
 # MATURITY: PRODUCTION — End-to-end smoke tests and restart-under-load drills.
 
 End-to-end scenarios that prove the system behaves correctly across
@@ -471,7 +471,7 @@ class TestMigrationIdempotency(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    print('\n=== Cascadia OS v0.2 — Smoke Tests & End-to-End Drills ===\n')
+    print('\n=== Cascadia OS v0.34 — Smoke Tests & End-to-End Drills ===\n')
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for cls in [TestFullRunLifecycle, TestMigrationIdempotency]:
