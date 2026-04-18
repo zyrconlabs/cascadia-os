@@ -10,7 +10,7 @@ Does not own: step execution (operators do that), approval decisions (SENTINEL/a
 STITCH connects steps, operators, triggers, and outcomes into
 durable sequences. The name implies connecting things together.
 """
-# MATURITY: FUNCTIONAL — Workflow definitions and run tracking work. Actual step dispatch to operators is v0.3.
+# MATURITY: FUNCTIONAL — Workflow definitions and run tracking work. Actual step dispatch to operators is v0.35.
 from __future__ import annotations
 
 import argparse
@@ -140,7 +140,9 @@ class StitchService:
         self.runtime.register_route('POST', '/run/advance', self.advance_run)
         self.runtime.register_route('POST', '/run/pause', self.pause_run)
         self.runtime.register_route('POST', '/run/status', self.run_status)
-        self.runtime.register_route('GET',  '/run/active', self.active_runs)
+        self.runtime.register_route('GET',  '/run/active',   self.active_runs)
+        self.runtime.register_route('POST', '/run/execute',  self.execute_run)
+        self.runtime.register_route('POST', '/run/resume',   self.resume_run)
 
     def _register_builtins(self) -> None:
         """Register built-in workflow templates."""
@@ -248,6 +250,52 @@ class StitchService:
         with self._lock:
             active = [r.to_dict() for r in self._runs.values() if r.state == 'running']
         return 200, {'active_runs': active, 'count': len(active)}
+
+
+    def execute_run(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Execute a workflow run via WorkflowRuntime.
+        Delegates durable execution to WorkflowRuntime — STITCH owns the
+        workflow definition, WorkflowRuntime owns durable step execution.
+        """
+        from cascadia.automation.workflow_runtime import WorkflowRuntime
+        workflow_id = payload.get('workflow_id', 'lead_follow_up')
+        with self._lock:
+            definition = self._workflows.get(workflow_id)
+        if definition is None:
+            return 404, {'error': f'workflow not found: {workflow_id}'}
+        db_path = self.config.get('database_path', './data/runtime/cascadia.db')
+        try:
+            runtime = WorkflowRuntime(db_path)
+            result = runtime.execute(workflow_id, definition, payload)
+            return 200, result.to_dict()
+        except Exception as exc:
+            return 500, {'error': str(exc)}
+
+    def resume_run(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Resume a workflow run after approval or restart.
+        Looks up the workflow_id from the run record, then re-executes.
+        """
+        from cascadia.automation.workflow_runtime import WorkflowRuntime
+        from cascadia.durability.run_store import RunStore
+        run_id = payload.get('run_id', '')
+        if not run_id:
+            return 400, {'error': 'run_id required'}
+        db_path = self.config.get('database_path', './data/runtime/cascadia.db')
+        try:
+            store = RunStore(db_path)
+            run = store.get_run(run_id)
+            if run is None:
+                return 404, {'error': f'run not found: {run_id}'}
+            workflow_id = run.get('goal', '').split(':')[0].strip() or 'lead_follow_up'
+            with self._lock:
+                definition = self._workflows.get(workflow_id) or self._workflows.get('lead_follow_up')
+            runtime = WorkflowRuntime(db_path)
+            result = runtime.execute(workflow_id or 'lead_follow_up', definition, {'run_id': run_id})
+            return 200, result.to_dict()
+        except Exception as exc:
+            return 500, {'error': str(exc)}
 
     def start(self) -> None:
         self.runtime.start()

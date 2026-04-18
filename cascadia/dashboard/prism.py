@@ -12,7 +12,7 @@ PRISM is the window into everything running on Cascadia OS.
 A non-technical user should be able to understand the system state
 from PRISM alone without reading logs.
 """
-# MATURITY: FUNCTIONAL — DB aggregation queries work. Real-time push is v0.3.
+# MATURITY: FUNCTIONAL — DB aggregation queries work. Real-time push is v0.35.
 from __future__ import annotations
 
 import argparse
@@ -83,6 +83,7 @@ class PrismService:
         self.runtime.register_route('GET',  '/api/prism/blocked',     self.blocked_runs)
         self.runtime.register_route('GET',  '/api/prism/workflows',   self.workflow_list)
         self.runtime.register_route('GET',  '/api/prism/sentinel',    self.sentinel_status)
+        self.runtime.register_route('POST', '/api/prism/approve',    self.approve_action)
 
     # ------------------------------------------------------------------
     # Aggregated views
@@ -254,6 +255,70 @@ class PrismService:
         """SENTINEL risk levels and compliance rules."""
         sentinel = _http_get(self._ports.get('sentinel', 0), '/risk-levels') or {}
         return 200, {**sentinel, 'generated_at': _now()}
+
+
+    def approve_action(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Record an approval decision from PRISM UI and resume the workflow run.
+        Called by the Approve / Reject buttons in the live approvals surface.
+        """
+        approval_id = payload.get('approval_id')
+        decision    = payload.get('decision', '')
+        actor       = payload.get('actor', 'prism_operator')
+        reason      = payload.get('reason', '')
+        run_id      = payload.get('run_id', '')
+
+        if decision not in ('approved', 'denied'):
+            return 400, {'error': 'decision must be approved or denied'}
+        if approval_id is None:
+            return 400, {'error': 'approval_id required'}
+
+        try:
+            from cascadia.durability.run_store import RunStore
+            from cascadia.system.approval_store import ApprovalStore
+            from cascadia.automation.workflow_runtime import WorkflowRuntime
+            from cascadia.automation.stitch import WorkflowDefinition, WorkflowStep
+
+            store     = RunStore(self.config['database_path'])
+            approvals = ApprovalStore(store)
+
+            # 1. Record the decision — wakes run to 'retrying' if approved
+            approvals.record_decision(int(approval_id), decision, actor, reason)
+
+            # 2. If approved, find run_id from approval record and resume
+            resume_result: Optional[Dict[str, Any]] = None
+            if decision == 'approved':
+                if not run_id:
+                    with store.connection() as conn:
+                        row = conn.execute(
+                            'SELECT run_id FROM approvals WHERE id = ?', (approval_id,)
+                        ).fetchone()
+                    run_id = row['run_id'] if row else ''
+
+                if run_id:
+                    definition = WorkflowDefinition(
+                        'lead_follow_up', 'Lead Follow-Up', [
+                            WorkflowStep('parse_lead',     'main_operator',  'parse_lead'),
+                            WorkflowStep('enrich_company', 'main_operator',  'enrich_company'),
+                            WorkflowStep('draft_email',    'main_operator',  'draft_email'),
+                            WorkflowStep('send_email',     'gmail_operator', 'email.send', on_failure='stop'),
+                            WorkflowStep('log_crm',        'main_operator',  'crm.write'),
+                        ],
+                    )
+                    runtime = WorkflowRuntime(self.config['database_path'])
+                    result  = runtime.execute('lead_follow_up', definition, {'run_id': run_id})
+                    resume_result = result.to_dict()
+
+            return 200, {
+                'approval_id': approval_id,
+                'decision':    decision,
+                'recorded':    True,
+                'run_id':      run_id,
+                'resume_result': resume_result,
+                'generated_at': _now(),
+            }
+        except Exception as exc:
+            return 500, {'error': str(exc)}
 
     # ------------------------------------------------------------------
     # Internal helpers — query durability layer directly
