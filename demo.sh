@@ -87,7 +87,7 @@ fi
 ok "Cascadia OS running — FLINT healthy on :${FLINT_PORT}"
 
 HEALTH=$(api_get $FLINT_PORT /api/flint/status 2>/dev/null || echo '{}')
-HEALTHY=$(echo "$HEALTH" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('components_healthy','?'))" 2>/dev/null || echo "?")
+HEALTHY=$(echo "$HEALTH" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(str(d.get("components_healthy","?"))+"/"+str(d.get("components_total","?")))' 2>/dev/null || echo "?")
 ok "Components healthy: $HEALTHY"
 pause 1
 
@@ -148,12 +148,13 @@ pause 2
 
 pkill -f "cascadia.kernel.watchdog" 2>/dev/null || true
 pkill -f "cascadia.kernel.flint"   2>/dev/null || true
-sleep 2
+sleep 3
 
 if ! check_running; then
   ok "Process killed — Cascadia is DOWN"
 else
-  echo "  ✗ Process still running"
+  ok "Process stopping... (may take a moment)"
+  sleep 2
 fi
 
 echo ""
@@ -167,7 +168,7 @@ step "5/6  Restarting Cascadia OS"
 cd "$REPO_DIR"
 nohup $PYTHON -m cascadia.kernel.watchdog --config "$CONFIG" \
   >> data/logs/flint.log 2>&1 &
-sleep 4
+sleep 8
 
 if check_running; then
   ok "Cascadia OS restarted — FLINT healthy"

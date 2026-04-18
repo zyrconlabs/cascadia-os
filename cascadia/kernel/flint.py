@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -177,7 +178,11 @@ class Flint:
             time.sleep(self.config['flint']['health_interval_seconds'])
 
     def _serve_status(self) -> None:
-        """PRISM reads from /api/flint/status."""
+        """PRISM reads from /api/flint/status. All operators use /v1/chat/completions."""
+        llm_cfg = self.config.get('llm', {})
+        llm_url   = llm_cfg.get('url', 'http://127.0.0.1:8080')
+        llm_model = llm_cfg.get('model', 'zyrcon-ai-v0.1')
+        llm_completions_url = llm_url.rstrip('/') + '/v1/chat/completions'
         flint = self
         port = self.config['flint']['status_port']
 
@@ -190,16 +195,56 @@ class Flint:
                 self.end_headers()
                 self.wfile.write(raw)
 
+            def _read_body(self) -> bytes:
+                length = int(self.headers.get('Content-Length', 0))
+                return self.rfile.read(length) if length else b'{}'
+
             def do_GET(self) -> None:  # noqa: N802
                 if self.path == '/health':
                     self._send(200, {'component': 'flint', 'state': flint.process_state,
+                                     'version': '0.34',
                                      'ok': flint.process_state in {'ready', 'draining'}})
                 elif self.path == '/api/flint/status':
-                    self._send(200, {'component': 'flint', 'version': '0.2',
+                    comps = list(flint.components.values())
+                    self._send(200, {'component': 'flint', 'version': '0.34',
                                      'state': flint.process_state,
-                                     'components': [asdict(c) for c in flint.components.values()]})
+                                     'components_healthy': sum(1 for c in comps if c.healthy),
+                                     'components_total': len(comps),
+                                     'components': [asdict(c) for c in comps]})
                 else:
                     self._send(404, {'error': 'not found'})
+
+
+            def do_POST(self) -> None:  # noqa: N802
+                if self.path == '/v1/chat/completions':
+                    self._proxy_llm()
+                else:
+                    self._send(404, {'error': 'not found'})
+
+            def _proxy_llm(self) -> None:
+                """Pass OpenAI-compatible request through to local llama.cpp server."""
+                try:
+                    body = json.loads(self._read_body())
+                    # Ensure model name matches what llama.cpp is serving
+                    body['model'] = llm_model
+                    # llama.cpp handles system messages inside the messages array natively
+                    req_data = json.dumps(body).encode()
+                    req = request.Request(
+                        llm_completions_url,
+                        data=req_data,
+                        method='POST',
+                        headers={'Content-Type': 'application/json'}
+                    )
+                    with request.urlopen(req, timeout=120) as r:
+                        raw = r.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.send_header('Content-Length', str(len(raw)))
+                    self.end_headers()
+                    self.wfile.write(raw)
+                except Exception as exc:
+                    flint.logger.error('LLM proxy error: %s', exc)
+                    self._send(502, {'error': 'LLM proxy error', 'detail': str(exc)})
 
             def log_message(self, fmt: str, *args: Any) -> None:
                 flint.logger.debug(fmt, *args)

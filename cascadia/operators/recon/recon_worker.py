@@ -42,7 +42,8 @@ LLM_ENDPOINTS = {
     "zyrcon-7b":  "http://127.0.0.1:4011/v1/chat/completions",
     "zyrcon-fast": "http://127.0.0.1:4011/v1/chat/completions",
 }
-DEFAULT_MODEL = "zyrcon-3b"
+DEFAULT_MODEL    = "zyrcon-3b"
+ANTHROPIC_MODEL  = "zyrcon-ai-v0.1"   # local llama.cpp model via FLINT proxy
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -451,7 +452,7 @@ Search results:
         resp = requests.post(
             endpoint,
             json={
-                "model": "local",
+                "model": ANTHROPIC_MODEL,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user",   "content": user_prompt},
