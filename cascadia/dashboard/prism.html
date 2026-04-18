@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PRISM — Cascadia OS v0.33</title>
+<title>PRISM — Cascadia OS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -373,6 +373,30 @@ button{cursor:pointer;font-family:var(--font)}input,textarea,select{font-family:
 input[type="file"]{display:none}
 .spacer{flex:1}
 .badge-preview{font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:3px;background:var(--purple-soft);color:var(--purple);font-weight:500}
+
+/* ── OPERATOR CARDS ── */
+.op-section{padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:500;color:var(--gray-400);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
+.op-count{font-size:9px;color:var(--gray-400);font-family:var(--mono)}
+.op-card{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--gray-100);transition:background .12s;text-decoration:none}
+.op-card:hover{background:var(--gray-100)}
+.op-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;color:#fff;position:relative}
+.op-icon--intelligence{background:linear-gradient(135deg,#4facfe,#00f2fe)}
+.op-icon--sales{background:linear-gradient(135deg,#43e97b,#38f9d7)}
+.op-icon--executive{background:linear-gradient(135deg,#fa709a,#fee140)}
+.op-icon--inbound{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
+.op-icon--engineering{background:linear-gradient(135deg,#f093fb,#f5576c)}
+.op-body{flex:1;min-width:0}
+.op-name{font-size:12px;font-weight:600;color:var(--navy-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-desc{font-size:10px;color:var(--gray-500);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-badges{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap}
+.op-badge{font-size:8.5px;font-family:var(--mono);padding:1px 5px;border-radius:3px;font-weight:500}
+.op-badge--production{background:rgba(52,211,153,.15);color:#059669}
+.op-badge--beta{background:rgba(167,139,250,.15);color:#7c3aed}
+.op-badge--online{background:rgba(52,211,153,.15);color:#059669}
+.op-badge--offline{background:rgba(248,113,113,.12);color:#dc2626}
+.op-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.op-dot--online{background:var(--green);box-shadow:0 0 4px var(--green-glow)}
+.op-dot--offline{background:var(--gray-300)}
 </style>
 </head>
 <body>
@@ -883,7 +907,7 @@ async function handleCommand(id, cmd) {
       const total = Object.keys(comps).length;
       const ready = Object.values(comps).filter(s=>s==='ready').length;
       const lines = Object.entries(comps).map(([n,s])=>`  ${n.padEnd(10)} ${s==='ready'?'✓ ready':s==='starting'?'… starting':'✗ '+s}`).join('\n');
-      S.messages[id].push({time:t,type:'agent',text:`Health Report — Cascadia OS v0.33\n\n${lines}\n\n${ready}/${total} components ready.${ready===total?'\nAll systems nominal.':'\nSome components still initializing.'}`});
+      S.messages[id].push({time:t,type:'agent',text:`Health Report — Cascadia OS\n\n${lines}\n\n${ready}/${total} components ready.${ready===total?'\nAll systems nominal.':'\nSome components still initializing.'}`});
     }
     await Vault.saveMessages(id,S.messages[id]); renderMain(); scrollChat(); return;
   }
@@ -1617,6 +1641,50 @@ async function pollLiveRuns() {
   }
 }
 
+
+/* ═══ OPERATOR CARDS ═══ */
+async function refreshOperators() {
+  const d = await prismFetch('/api/prism/operators');
+  if (!d) return;
+  const container = document.getElementById('op-cards-list');
+  if (!container) return;
+  const countEl = document.getElementById('op-online-count');
+  if (countEl) countEl.textContent = d.online + '/' + d.total;
+
+  const ICONS = {
+    intelligence: 'RI', sales: 'QT', executive: 'AU',
+    inbound: 'SC', engineering: 'JP'
+  };
+  const INITIALS = {
+    'recon':'RC','scout':'SC','quote':'QT','chief':'CH',
+    'aurelia':'AU','debrief':'DB','competition-researcher':'CR','jr-programmer':'JP'
+  };
+
+  container.innerHTML = d.operators.map(op => {
+    const online = op.status !== 'offline';
+    const icon = INITIALS[op.id] || op.name.slice(0,2).toUpperCase();
+    const catCls = 'op-icon--' + (op.category || 'intelligence');
+    const dotCls = online ? 'op-dot--online' : 'op-dot--offline';
+    const statBadge = op.op_status === 'production'
+      ? '<span class="op-badge op-badge--production">production</span>'
+      : '<span class="op-badge op-badge--beta">beta</span>';
+    const onlineBadge = online
+      ? '<span class="op-badge op-badge--online">online</span>'
+      : '<span class="op-badge op-badge--offline">offline</span>';
+    const href = online && op.ui_url ? op.ui_url : '#';
+    const target = online && op.ui_url ? ' target="_blank"' : '';
+    return `<a class="op-card" href="${href}"${target}>
+      <div class="op-icon ${catCls}">${icon}</div>
+      <div class="op-body">
+        <div class="op-name">${op.name}</div>
+        <div class="op-desc">${op.description ? op.description.slice(0,52) + (op.description.length>52?'…':'') : ''}</div>
+        <div class="op-badges">${statBadge}${onlineBadge}</div>
+      </div>
+      <div class="op-dot ${dotCls}"></div>
+    </a>`;
+  }).join('');
+}
+
 function startLivePoll() {
   pollLiveRuns();
   setInterval(pollLiveRuns, 3000);
@@ -1717,7 +1785,7 @@ function toggleRunDetail(id) { S.selectedRun=S.selectedRun===id?null:id; renderR
 function replayRun(id) { const r=Object.values(S.runs).flat().find(x=>x.id===id); if(r)selectCell(r.workerId); }
 function exportRuns() { const data=JSON.stringify(getFilteredRuns(),null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download='prism_runs.json';a.click();URL.revokeObjectURL(url); }
 function showAddWorker() { alert('Add worker:\n\nRegister a new worker by providing a WorkerManifest:\n• id (unique)\n• name / role\n• apiBaseUrl (e.g. http://localhost:8004)\n• supportsThoughts / supportsPanel\n• metricsSchema\n\nWorker SDK and manifest editor: Studio surface → Phase 2'); }
-function showHelp() { alert('PRISM — Cascadia OS v0.33\n\n• Ops: Chat, thought stream, worker panels\n• Runs: Full run history, events, replay, filters\n• Observability: Real vault metrics + gateway\n• Approvals: Review and resolve pending actions\n• Studio: Drag-and-drop flow builder with node test\n• Admin: Users, API keys (persisted), vault, audit log, Gateway Contract check\n\nGateway Contract v1 at localhost:7001'); }
+function showHelp() { alert('PRISM — Cascadia OS\n\n• Ops: Chat, thought stream, worker panels\n• Runs: Full run history, events, replay, filters\n• Observability: Real vault metrics + gateway\n• Approvals: Review and resolve pending actions\n• Studio: Drag-and-drop flow builder with node test\n• Admin: Users, API keys (persisted), vault, audit log, Gateway Contract check\n\nGateway Contract v1 at localhost:7001'); }
 
 /* ═══ UTILITIES ═══ */
 function esc(s){const d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML;}

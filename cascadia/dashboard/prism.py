@@ -84,6 +84,7 @@ class PrismService:
         self.runtime.register_route('GET',  '/api/prism/workflows',   self.workflow_list)
         self.runtime.register_route('GET',  '/api/prism/sentinel',    self.sentinel_status)
         self.runtime.register_route('POST', '/api/prism/approve',    self.approve_action)
+        self.runtime.register_route('GET',  '/api/prism/operators',  self.operator_status)
 
     # ------------------------------------------------------------------
     # Aggregated views
@@ -255,6 +256,53 @@ class PrismService:
         """SENTINEL risk levels and compliance rules."""
         sentinel = _http_get(self._ports.get('sentinel', 0), '/risk-levels') or {}
         return 200, {**sentinel, 'generated_at': _now()}
+
+
+    def operator_status(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """Live status of all registered operators from registry.json."""
+        import urllib.request as _ur
+        registry_path = Path(__file__).parent.parent / "operators" / "registry.json"
+        try:
+            registry = json.loads(registry_path.read_text())
+            operators = registry.get("operators", [])
+        except Exception:
+            operators = []
+
+        result = []
+        for op in operators:
+            port = op.get("port")
+            health_path = op.get("health_path", "/api/health")
+            status = "offline"
+            detail = {}
+            if port:
+                try:
+                    with _ur.urlopen(
+                        f"http://127.0.0.1:{port}{health_path}", timeout=1
+                    ) as r:
+                        detail = json.loads(r.read().decode())
+                        status = detail.get("status", "online")
+                except Exception:
+                    status = "offline"
+            result.append({
+                "id":          op.get("id"),
+                "name":        op.get("name"),
+                "category":    op.get("category"),
+                "description": op.get("description"),
+                "status":      status,
+                "port":        port,
+                "autonomy":    op.get("autonomy"),
+                "op_status":   op.get("status"),  # production/beta
+                "ui_url":      f"http://localhost:{port}/" if port else None,
+                "sample_output": op.get("sample_output"),
+            })
+
+        online = sum(1 for o in result if o["status"] != "offline")
+        return 200, {
+            "operators": result,
+            "total": len(result),
+            "online": online,
+            "generated_at": _now(),
+        }
 
 
     def approve_action(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
