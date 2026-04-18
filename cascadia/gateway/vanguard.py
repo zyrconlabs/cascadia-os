@@ -11,7 +11,7 @@ Does not own: encryption (CURTAIN), chat sessions (BELL),
 Vanguard implies first contact — the layer that meets the outside
 world before anything else in Cascadia OS does.
 """
-# MATURITY: STUB — Inbound normalization and outbound queuing work. Real channel adapters (SMTP, SMS, webhooks) are v0.3.
+# MATURITY: PRODUCTION — Inbound normalization and outbound webhook/HTTP dispatch via HANDSHAKE. SMTP/SMS adapters are v0.44 roadmap.
 from __future__ import annotations
 
 import json

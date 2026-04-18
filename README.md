@@ -108,12 +108,12 @@ Cascadia OS coordinates AI operators that:
 |---|---|---|
 | CREW | 5100 | Operator registry with wildcard capability validation |
 | VAULT | 5101 | Durable SQLite-backed memory, CREW-validated access |
-| SENTINEL | 5102 | Risk classification per action type |
+| SENTINEL | 5102 | Risk classification, blocks denied actions in execution loop |
 | CURTAIN | 5103 | AES-256-GCM field encryption, HMAC-SHA256 signing |
-| BEACON | 6200 | Capability-checked routing and operator handoffs |
+| BEACON | 6200 | Capability-checked routing, HTTP forwarding to operator ports |
 | STITCH | 6201 | Workflow sequencing with built-in templates |
-| VANGUARD | 6202 | Inbound channel normalization, outbound dispatch |
-| HANDSHAKE | 6203 | External API connection registry |
+| VANGUARD | 6202 | Inbound channel normalization, outbound dispatch via HANDSHAKE |
+| HANDSHAKE | 6203 | Webhook/HTTP/SMTP execution, external API registry |
 | BELL | 6204 | Chat sessions, workflow execution, approval collection |
 | ALMANAC | 6205 | Component catalog, glossary, runbooks |
 | PRISM | 6300 | Live system visibility — runs, approvals, operators |

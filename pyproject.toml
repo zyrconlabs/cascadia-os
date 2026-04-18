@@ -1,6 +1,6 @@
 [project]
 name = "cascadia-os"
-version = "0.40.0"
+version = "0.43.0"
 description = "Cascadia OS — local-first single-node operator platform"
 requires-python = ">=3.11"
 dependencies = [
@@ -30,6 +30,6 @@ where = ["."]
 include = ["cascadia*"]
 
 [tool.cascadia]
-version = "0.40"
+version = "0.43"
 control_plane = "cascadia.kernel.flint"
 entrypoint    = "cascadia.kernel.watchdog"
