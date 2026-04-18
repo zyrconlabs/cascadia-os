@@ -1,5 +1,5 @@
 """
-flint.py — Cascadia OS v0.34
+flint.py — Cascadia OS v{VERSION}
 FLINT: Server and OS control layer.
 
 Owns: process lifecycle, readiness-gated startup, health supervision,
@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib import request
 
+from cascadia import VERSION, VERSION_SHORT
 from cascadia.shared.config import load_config
 from cascadia.shared.logger import configure_logging
 
@@ -202,11 +203,11 @@ class Flint:
             def do_GET(self) -> None:  # noqa: N802
                 if self.path == '/health':
                     self._send(200, {'component': 'flint', 'state': flint.process_state,
-                                     'version': '0.34',
+                                     'version': VERSION_SHORT,
                                      'ok': flint.process_state in {'ready', 'draining'}})
                 elif self.path == '/api/flint/status':
                     comps = list(flint.components.values())
-                    self._send(200, {'component': 'flint', 'version': '0.34',
+                    self._send(200, {'component': 'flint', 'version': VERSION_SHORT,
                                      'state': flint.process_state,
                                      'components_healthy': sum(1 for c in comps if c.healthy),
                                      'components_total': len(comps),
@@ -294,7 +295,7 @@ class Flint:
         threading.Thread(target=self._serve_status, daemon=True, name='flint-status').start()
         self.start_tiers()
         self.process_state = 'ready'
-        self.logger.info('FLINT ready — Cascadia OS v0.34')
+        self.logger.info('FLINT ready — Cascadia OS v' + VERSION')
         self.monitor_loop()
 
 
