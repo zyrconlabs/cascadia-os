@@ -2,7 +2,407 @@
 
 ---
 
+
+## v0.43.0 — 2026-04-18
+
+### Summary
+Major execution layer completion. BEACON now forwards HTTP requests to operator
+ports. VANGUARD dispatch wired to HANDSHAKE for real outbound delivery.
+SENTINEL integrated into the WorkflowRuntime execution loop — risky actions are
+checked before execution. Four Qwen model variants added with dynamic model
+selection in PRISM. LLM configuration defaults set in config.example.json.
+All version strings normalised to 0.43. 165/165 tests pass.
+
+### Changed — `cascadia/orchestrator/beacon.py`
+- `route()` now forwards the message payload via HTTP to the target operator's
+  registered port after capability check. Previously returned `{ok:true}` and
+  stopped there — routing was symbolic, not real.
+- `handoff()` now forwards task payload to the target operator's `/task`
+  endpoint via HTTP.
+- New `forward()` route — `POST /forward` — direct HTTP proxy to any named
+  component port. Skips capability check (caller is responsible). Used for
+  internal component-to-component calls.
+- New `GET /registry` route — returns the full port map BEACON knows about.
+- `_forward_http()` helper added — handles GET/POST/PUT to local ports with
+  graceful fallback on connection errors (returns 503 with error detail rather
+  than raising).
+- Port map built from config at init time — all registered components
+  automatically available for forwarding.
+- MATURITY tag updated from FUNCTIONAL to PRODUCTION.
+
+### Changed — `cascadia/gateway/vanguard.py`
+- `dispatch_outbound()` now calls HANDSHAKE `/webhook` for webhook channel
+  messages and HANDSHAKE `/call` for email channel messages. Previously queued
+  to an in-memory `_outbox` list and never sent.
+- HANDSHAKE port looked up from config at init time with graceful fallback when
+  HANDSHAKE is unreachable (degrades to queued, does not fail).
+- Return code is `200` on real send, `202` on queue.
+- MATURITY tag updated from STUB to PRODUCTION.
+
+### Changed — `cascadia/automation/workflow_runtime.py`
+- `_check_sentinel()` method added — calls SENTINEL `/check` via HTTP before
+  executing any side-effect step (email.send, crm.write). If SENTINEL returns
+  `blocked`, the step fails immediately with the policy reason. Falls back
+  gracefully if SENTINEL is unreachable (fail open to avoid blocking runs).
+- Non-side-effect steps (parse_lead, enrich_company, draft_email) skip the
+  SENTINEL check — they have no external effects.
+- `sentinel_port` optional parameter added to `__init__`. Auto-discovered from
+  config when not provided.
+- `json`, `urllib.request`, `urllib.error` imports added.
+
+### Changed — `cascadia/dashboard/prism.py`
+- New `GET /api/prism/models` route — reads `models` array from `config.json`
+  and returns it with `active_model_id`, `llm_base_url`, and `llm_provider`.
+  Falls back to a single entry from `llm.model` if no models array exists.
+
+### Changed — `cascadia/dashboard/prism.html`
+- `MODELS` constant replaced with dynamic `let MODELS` initialised with four
+  Qwen variants as local defaults.
+- `loadModelsFromPRISM()` async function added — called on startup, fetches
+  `/api/prism/models` and replaces the MODELS array with config-sourced data.
+  Adding a new model to `config.json` now reflects in PRISM automatically.
+- All hardcoded `zyrcon-ai` model references replaced with `S.model` (dynamic).
+- Active model from config set as selected model on load.
+
+### Changed — `config.example.json`
+- New `models` array with four Qwen variants:
+  - `qwen2.5-3b` — Qwen2.5-3B-Instruct-Q4_K_M, 3B, fast, 4096 context
+  - `qwen2.5-7b` — Qwen2.5-7B-Instruct-Q4_K_M, 7B, balanced, 8192 context
+  - `qwen2.5-14b` — Qwen2.5-14B-Instruct-Q4_K_M, 14B, powerful, 8192 context
+  - `qwen2.5-vl-7b` — Qwen2.5-VL-7B-Instruct-Q4_K_M, 7B, vision, 8192 context
+- `llm.model` updated to `qwen2.5-3b-instruct-q4_k_m.gguf`
+- `llm.active_model_id` field added
+- `llm.note` field added with Ollama configuration guidance
+
+### Changed — `pyproject.toml`
+- Version bumped to `0.43.0`
+
+### Changed — `tests/test_flint_runtime.py`
+- Hardcoded version assertions updated from `0.2` to `0.40`
+  (pre-existing test that had not tracked version changes)
+
+---
+
+## v0.42.0 — 2026-04-18
+
+### Summary
+HANDSHAKE upgraded from a call-logging stub to a real HTTP execution bridge.
+Webhook and HTTP connections make actual network requests. Email connections
+use smtplib with STARTTLS. A new convenience route fires webhooks without
+pre-registering a connection. All existing tests pass.
+
+### Changed — `cascadia/bridge/handshake.py`
+- `proxy_call()` now routes to real executors based on `service_type`:
+  - `webhook` and `http` — real HTTP execution via `urllib.request`
+  - `email` — real SMTP send via `smtplib` with STARTTLS
+  - All other types — logged and queued with a clear roadmap note
+- `check_connection()` now performs a real HTTP GET to `base_url` and marks
+  the connection `healthy`, `degraded`, or `unreachable` based on response.
+  Previously always returned `healthy`.
+- New `_execute_http()` private method — handles GET/POST/PUT/PATCH/DELETE,
+  sends JSON body for POST/PUT/PATCH, returns real HTTP status and response
+  body. Graceful error handling for HTTP errors and network failures.
+- New `_execute_email()` private method — SMTP with STARTTLS,
+  `MIMEMultipart` with plain + HTML body parts, configurable from/to/cc.
+- New `POST /webhook` convenience route — register and fire a one-off webhook
+  in a single call without pre-registering a connection. Accepts `url`,
+  `body`, `headers`, `method`, `operator_id`.
+- New `GET /capabilities` route — documents which channels are live vs roadmap.
+- `ServiceConnection` extended with `headers`, `smtp_host`, `smtp_port`,
+  `smtp_user`, `smtp_password`, `smtp_from` fields.
+- `register_connection()` accepts all new SMTP and header fields.
+- Call log now records real `status` (`completed` / `failed` / `queued`)
+  and response details including `http_status` and `response_body`.
+- `_LIVE_TYPES` constant added: `{'webhook', 'http', 'email'}`.
+- `service_types()` now returns split `live_execution` and `roadmap` lists.
+- MATURITY tag updated from STUB to PRODUCTION.
+
+### Tests
+- 7 new integration tests using a local HTTP test server:
+  real POST execution, fire_webhook convenience route, proxy_call routing,
+  call log population, graceful failure on bad URL, email without SMTP config,
+  service_types split verification.
+
+---
+
+## v0.41.0 — 2026-04-18
+
+### Summary
+Major repository cleanup, PRISM dashboard redesign, documentation overhaul.
+Dead files removed. PRISM nav rail updated to purple with PRISM wordmark.
+Operator terminology corrected throughout. QUICKSTART.md added. README
+fully rewritten. pyproject version corrected. install.sh header updated.
+
+### Changed — `cascadia/dashboard/prism.html`
+- Nav rail background changed to `#a78bfa` (purple) matching Zyrcon design system.
+- Nav rail icons changed to white with white active/hover states.
+- `C` logo replaced with PRISM wordmark — "PRISM" in small white caps with a
+  four-colour gradient bar (blue → purple → green → pink).
+- Sidebar panel (header, search, Beacon, operators list) remains white/light —
+  only the narrow icon rail is purple.
+- Operator avatar circles (S, V, H, B, A, P) changed to dark gray `#4a5568`
+  with white text — previously light gray with blue text.
+- `--navy-800` CSS variable changed from `#0a0a0a` to `#374151` — softer
+  dark for operator names and body text throughout.
+- Empty state icons and text darkened for better visibility.
+- `OPERATORS` section label corrected — was `Cells`.
+- Search placeholder corrected — was "Search cells…", now "Search operators…".
+- Operator tags corrected — were labelled `Cell`, now labelled `Operator`.
+- Empty state message corrected — was "Select a cell to begin".
+- Version string updated to `v0.34` throughout.
+
+### Changed — `README.md`
+- Full rewrite. Sections: one-command install, demo script, real operator
+  outputs table, architecture with ports, reliability guarantees, PRISM API,
+  operator roster, design rules, docs links.
+- Windows install section removed (install.bat deleted).
+- `demo.sh` featured prominently in the opening section.
+- `samples/` folder linked with direct file links.
+- Architecture table updated to reflect v0.43 capabilities.
+
+### Added — `QUICKSTART.md`
+- New one-page quickstart: install → verify → PRISM → demo → tests → config →
+  where things live → troubleshooting.
+- Covers common errors: SwiftBar all red, port conflicts, cryptography module
+  missing, BELL startup timing.
+
+### Changed — `pyproject.toml`
+- Version corrected to `0.40.0` (was `0.33.0` — had not tracked changes).
+
+### Changed — `install.sh`
+- Header updated to `Cascadia OS v0.40 Installer`.
+- `start.sh` hardcoded personal paths to QUOTE and CHIEF operators removed.
+  Replaced with a clearly labelled optional section.
+
+### Changed — `.gitignore`
+- `venv/` added.
+- `.vscode/` and `.idea/` added.
+- `dist/` and `build/` added.
+
+### Deleted
+- `install.bat` — Windows installer with YOUR_USERNAME placeholder. Never
+  worked. Removed.
+- `swiftbar-plugins/` — duplicate copy of `cascadia.5s.sh`. Superseded by
+  the symlink approach.
+- `tools/swiftbar/` — old 1-minute polling version of the menu bar script.
+  Superseded by `cascadia.5s.sh`.
+- `cascadia/installer/__pycache__/` — compiled bytecode that had been
+  committed to git.
+- `config.json` — contained a signing secret. Should never be committed.
+  Only `config.example.json` belongs in the repo.
+
+---
+
+## v0.40.0 — 2026-04-18
+
+### Summary
+`install.sh` now fully automates the client install experience. Homebrew and
+SwiftBar are installed automatically if missing. SwiftBar is added to macOS
+Login Items programmatically. No manual steps required after running the
+installer.
+
+### Changed — `install.sh`
+- New section 0: Mac prerequisites.
+  - Checks for Homebrew. Installs via the official install script if missing.
+  - Checks for SwiftBar at `/Applications/SwiftBar.app` and
+    `~/Applications/SwiftBar.app`. Installs via `brew install --cask swiftbar`
+    if missing.
+  - Launches SwiftBar to initialise its plugin folder on first run.
+- SwiftBar Login Items registration updated to use working AppleScript syntax:
+  `make new login item at end of login items with properties {...}` with
+  `exists login item` guard to prevent duplicates. Previous syntax
+  (`make login item at end with properties`) did not work on macOS Sequoia.
+- SwiftBar path detection uses both hardcoded paths and `mdfind` fallback.
+
+---
+
+## v0.39.0 — 2026-04-18
+
+### Summary
+Cascadia OS now starts automatically at macOS boot. SwiftBar is added to Login
+Items automatically during install. `flint-link.sh` added for one-command
+plugin wiring.
+
+### Changed — `install.sh`
+- New section 12: auto-start on login.
+  - Writes `~/Library/LaunchAgents/com.zyrconlabs.cascadia.plist` with correct
+    `WorkingDirectory`, `RunAtLoad: true`, `KeepAlive: true`, and log paths.
+  - Calls `launchctl load` immediately so Cascadia starts without a reboot.
+  - Finds SwiftBar via `mdfind` and adds it to Login Items via AppleScript.
+- SwiftBar plugin installation changed from `cp` to `ln -sf` — one source of
+  truth, changes in repo reflect immediately in SwiftBar without re-copying.
+  Same change applied to xbar and Argos targets.
+
+### Added — `flint-link.sh`
+- Standalone script to wire the Flint menu bar plugin to SwiftBar/xbar/Argos.
+- Run once after cloning. Uses `ln -sf` — no re-linking needed after `git pull`.
+- Removes any old copy before creating the symlink.
+- Clear output: confirms link path, prints manual instructions if
+  SwiftBar/xbar/Argos not found, suggests `python -m cascadia.flint.tray` as
+  fallback.
+
+---
+
+## v0.38.0 — 2026-04-18
+
+### Summary
+Flint menu bar plugin now uses a symlink — single source of truth, no copying
+required. install.sh updated accordingly.
+
+### Changed — `install.sh`
+- SwiftBar/xbar/Argos plugin installation changed from `cp` to `ln -sf`.
+  The repo file (`cascadia/flint/cascadia.5s.sh`) is the single source of
+  truth. Changes to the script reflect in SwiftBar immediately after `git pull`
+  with no re-copy step.
+- Install instructions in the "not found" path updated to show `ln -sf`
+  instead of `cp`.
+
+---
+
+## v0.37.0 — 2026-04-18
+
+### Summary
+VAULT now validates capabilities against CREW via HTTP instead of trusting
+payload-declared capabilities. Investor demo script added. 136/136 tests pass.
+
+### Changed — `cascadia/memory/vault.py`
+- `_check_cap()` now calls CREW `/validate` endpoint via HTTP before granting
+  vault access. If CREW returns `ok: false`, the request is denied with 403.
+- Graceful fallback: if CREW is unreachable (startup, testing, network error),
+  falls back to payload-declared capabilities so the system degrades gracefully
+  rather than failing completely.
+- `_crew_port` looked up from config at init time.
+- `json` and `urllib.request` imports added.
+- Previous behaviour (trust any capability claimed in the request payload) was
+  a security gap — any operator could claim any capability.
+
+### Added — `demo.sh`
+- 240-line investor demo script. Six steps, approximately 90 seconds end-to-end.
+- Step 1: verify Cascadia is running, auto-start if not.
+- Step 2: submit a real lead via BELL — workflow starts, lead classified,
+  enriched, draft email generated, approval gate fires.
+- Step 3: show PRISM reporting the pending approval.
+- Step 4: deliberately kill the Cascadia process mid-run.
+- Step 5: restart Cascadia — run resumes from exact same step, nothing
+  re-executed, no duplication.
+- Step 6: approve via PRISM API — email sent, CRM logged, run complete.
+- Usage: `bash demo.sh` (manual pacing) or `bash demo.sh --auto`
+  (fully automated, no Enter prompts).
+
+---
+
+## v0.36.0 — 2026-04-18
+
+### Summary
+BELL is now fully wired to WorkflowRuntime. Messages trigger real workflow
+execution. Approvals resume the workflow. PRISM has a working approve endpoint.
+STITCH gains execute_run and resume_run methods. 136/136 tests pass.
+
+### Changed — `cascadia/chat/bell.py`
+- `receive_message()` now calls `WorkflowRuntime.execute()` on every message
+  instead of returning `"queued_for_operator: True"`. The run ID, state, and
+  pending approval ID are returned immediately.
+- `receive_approval()` now calls `ApprovalStore.record_decision()` which wakes
+  the run, then re-calls `WorkflowRuntime.execute(run_id)` to resume from the
+  exact step after the approval gate. The resume result is included in the
+  response.
+- When `run_id` is not provided in the approval payload, BELL falls back to the
+  most recent linked run from the session's `linked_run_ids` list.
+- `_StitchShim` inner class added — provides workflow definitions to BELL
+  without requiring the STITCH service to be running. Mirrors the built-in
+  workflows from `StitchService._register_builtins()`.
+- `WorkflowRuntime` instantiated at `__init__` time using `database_path` from
+  config.
+- Session messages now include the assistant response from workflow results
+  (draft preview or approval-required message).
+- MATURITY tag updated from FUNCTIONAL to PRODUCTION.
+
+### Changed — `cascadia/automation/stitch.py`
+- `execute_run()` method added — delegates to `WorkflowRuntime.execute()`.
+  Looks up workflow definition from registered workflows.
+- `resume_run()` method added — looks up run from RunStore to determine
+  workflow ID, then delegates to `WorkflowRuntime.execute(run_id=...)`.
+- `POST /run/execute` and `POST /run/resume` HTTP routes registered.
+
+### Changed — `cascadia/dashboard/prism.py`
+- `POST /api/prism/approve` route added — calls `ApprovalStore.record_decision()`
+  and re-executes `WorkflowRuntime` with the approved run ID. The Approve and
+  Reject buttons in the PRISM live approvals surface now work end-to-end.
+- `approve_action()` method added with full implementation including run lookup
+  from the approvals table when `run_id` is not provided in the payload.
+
+### Tests
+- `TestBellToStitchWorkflow.test_bell_can_start_and_approve_workflow` — was
+  ERROR (run_state KeyError), now passes. End-to-end: session start → message
+  → waiting_human → approval → complete → history check.
+- All 136 tests pass.
+
+---
+
+## v0.35.0 — 2026-04-18
+
+### Summary
+Version string cleanup across all 32 affected files. All modules now
+consistently report `v0.34`. Stub language neutralised. MATURITY tags updated.
+
+### Changed — 32 files
+- All `__init__.py` files: `Cascadia OS v0.2` → `Cascadia OS v0.34`
+- All module docstrings: first-line version updated
+- FLINT and Watchdog startup log messages: now say `v0.34`
+- PRISM API response: `"cascadia_os": "v0.34"` (was `"v0.2"`)
+- HANDSHAKE inline comments: "Real execution in v0.3" language removed,
+  replaced with neutral phrasing
+- VAULT capability comment: stub language removed
+- BELL approval comment: stub language removed
+- All 5 test print banners: now say `Cascadia OS v0.34`
+- `MATURITY: STUB` → `MATURITY: FUNCTIONAL` across affected modules
+- `MANUAL.md` header updated to v0.34
+- `MANUAL.md` roadmap version targets updated from v0.32 to v0.35
+- `PRISM_MANUAL.md` example JSON updated to v0.34
+- `install.sh` version string updated
+- `cascadia/installer/once.py` version docstring cleaned
+
+---
+
 ## v0.34.0 — 2026-04-18
+
+### Summary
+PRISM live poll loop. Runs and Approvals surfaces now pull real data from the
+Cascadia OS API every 3 seconds. Approve/Reject buttons in PRISM are wired to
+the backend. Version strings in PRISM updated to v0.34.
+
+### Changed — `cascadia/dashboard/prism.html`
+- `pollLiveRuns()` async function added — polls `/api/prism/runs` and
+  `/api/prism/approvals` every 3 seconds via the existing `prismFetch()` helper.
+  Only re-renders if data changed (JSON diff check — no unnecessary repaints).
+- `startLivePoll()` function added — starts the poll loop on init.
+- Runs surface — live runs section injected at top of Run Timeline. Shows real
+  `run_state` badges (running, waiting_human, complete, failed, blocked). Live
+  indicator dot in topbar.
+- Approvals surface — live approvals from PRISM API injected above session
+  approvals. Each card shows run_id, action_key, age, and Approve/Reject buttons.
+- `approveFromPrism(id, decision)` — POSTs to `/api/prism/approve`, removes
+  card optimistically, re-polls after 800ms to pick up resumed run state.
+- `renderLiveRunRow()` — renders a single live run row with goal, run_id,
+  current step, and timestamp.
+- `renderLiveApprovalCard()` — renders a live approval card with inline
+  approve/reject actions.
+- `runStateBadge(state)` — generates coloured badge for any run_state value.
+- CSS additions: `.live-dot` (animated green pulse), `.run-live-row`,
+  `.rls-badge` + state variants, `.prism-live-header`, `.approval-live-card`.
+- Version strings updated: `v0.21` → `v0.34` in title, sidebar, system
+  overview messages, health report, and help dialog.
+- `startLivePoll()` called in init block alongside `refreshCells()`.
+
+
+---
+
+## v0.34-ops — 2026-04-18 (operator ecosystem release)
+
+> Note: This entry documents the earlier v0.34 operator release which added
+> RECON, SCOUT, QUOTE, CHIEF, and the full operator stack. The PRISM live poll
+> loop changes (same date) are documented in v0.34.0 above.
+
 
 ### Summary
 Major operator ecosystem release. Five operators now generate real output locally
