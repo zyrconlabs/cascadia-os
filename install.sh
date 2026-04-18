@@ -153,6 +153,68 @@ elif [[ "$(uname)" == "Linux" ]]; then
     fi
 fi
 
+
+# ── 12. Auto-start on login (launchd + SwiftBar login item) ───────────────────
+if [[ "$(uname)" == "Darwin" ]]; then
+    PLIST_DIR="$HOME/Library/LaunchAgents"
+    PLIST_PATH="$PLIST_DIR/com.zyrconlabs.cascadia.plist"
+    PYTHON_BIN="$(which python3)"
+    mkdir -p "$PLIST_DIR"
+
+    cat > "$PLIST_PATH" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.zyrconlabs.cascadia</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${PYTHON_BIN}</string>
+        <string>-m</string>
+        <string>cascadia.kernel.watchdog</string>
+        <string>--config</string>
+        <string>${INSTALL_DIR}/config.json</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>${INSTALL_DIR}</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>${INSTALL_DIR}/data/logs/flint.log</string>
+    <key>StandardErrorPath</key>
+    <string>${INSTALL_DIR}/data/logs/flint.log</string>
+</dict>
+</plist>
+PLIST
+
+    # Unload old agent if present, load new one
+    launchctl unload "$PLIST_PATH" 2>/dev/null || true
+    launchctl load "$PLIST_PATH" 2>/dev/null && \
+        success "Cascadia registered as login agent — starts automatically at boot" || \
+        info "launchctl load failed — run manually: launchctl load $PLIST_PATH"
+
+    # Add SwiftBar to Login Items so it auto-launches at boot
+    SWIFTBAR_APP=$(mdfind "kMDItemCFBundleIdentifier == 'com.ameba.SwiftBar'" 2>/dev/null | head -1)
+    if [[ -n "$SWIFTBAR_APP" ]]; then
+        osascript << APPLESCRIPT 2>/dev/null && \
+            success "SwiftBar added to Login Items — launches automatically at boot" || \
+            info "Could not add SwiftBar to Login Items — add manually in System Settings → General → Login Items"
+tell application "System Events"
+    set loginItems to the name of every login item
+    if "SwiftBar" is not in loginItems then
+        make login item at end with properties {path:"${SWIFTBAR_APP}", hidden:false}
+    end if
+end tell
+APPLESCRIPT
+    else
+        info "SwiftBar not found — install with: brew install swiftbar"
+        info "Then run install.sh again to register it as a login item"
+    fi
+fi
+
 # ── 10. Done ──────────────────────────────────────────────────────────────────
 echo ""
 success "════════════════════════════════════════"
