@@ -116,37 +116,40 @@ INSTALLED_FLINT=false
 
 if [[ "$(uname)" == "Darwin" ]]; then
     if [[ -d "$SWIFTBAR_DIR" ]]; then
-        cp "$PLUGIN_SRC" "$SWIFTBAR_DIR/cascadia.5s.sh"
-        chmod +x "$SWIFTBAR_DIR/cascadia.5s.sh"
-        success "Flint plugin installed → SwiftBar"
+        # Symlink — one source of truth, repo changes reflect instantly in SwiftBar
+        ln -sf "$PLUGIN_SRC" "$SWIFTBAR_DIR/cascadia.5s.sh"
+        chmod +x "$PLUGIN_SRC"
+        success "Flint plugin linked → SwiftBar (symlink — no copy needed)"
         INSTALLED_FLINT=true
     elif [[ -d "$XBAR_DIR" ]]; then
-        cp "$PLUGIN_SRC" "$XBAR_DIR/cascadia.5s.sh"
-        chmod +x "$XBAR_DIR/cascadia.5s.sh"
-        success "Flint plugin installed → xbar"
+        ln -sf "$PLUGIN_SRC" "$XBAR_DIR/cascadia.5s.sh"
+        chmod +x "$PLUGIN_SRC"
+        success "Flint plugin linked → xbar (symlink)"
         INSTALLED_FLINT=true
     fi
     if [[ "$INSTALLED_FLINT" = false ]]; then
         echo ""
         info "Menu bar controller (Flint) not auto-installed."
-        echo "  Install SwiftBar to enable it:"
-        echo "    brew install swiftbar"
-        echo "  Then copy the plugin:"
+        echo "  Install SwiftBar: brew install swiftbar"
+        echo "  Then run: bash install.sh   (it will auto-link on next run)"
+        echo "  Or link manually:"
         echo "    mkdir -p \"$SWIFTBAR_DIR\""
-        echo "    cp \"$PLUGIN_SRC\" \"$SWIFTBAR_DIR/\""
-        echo "  Or run manually: python -m cascadia.flint.tray"
+        echo "    ln -sf \"$PLUGIN_SRC\" \"$SWIFTBAR_DIR/cascadia.5s.sh\""
+        echo "  Or run without SwiftBar: python -m cascadia.flint.tray"
     fi
 elif [[ "$(uname)" == "Linux" ]]; then
     if [[ -d "$ARGOS_DIR" ]]; then
-        cp "$PLUGIN_SRC" "$ARGOS_DIR/cascadia.5s.sh"
-        chmod +x "$ARGOS_DIR/cascadia.5s.sh"
-        success "Flint plugin installed → Argos"
+        ln -sf "$PLUGIN_SRC" "$ARGOS_DIR/cascadia.5s.sh"
+        chmod +x "$PLUGIN_SRC"
+        success "Flint plugin linked → Argos (symlink)"
         INSTALLED_FLINT=true
     fi
     if [[ "$INSTALLED_FLINT" = false ]]; then
         echo ""
         info "Menu bar controller not auto-installed."
-        echo "  Install Argos (GNOME) or run: python -m cascadia.flint.tray"
+        echo "  Install Argos (GNOME) or link manually:"
+        echo "    ln -sf \"$PLUGIN_SRC\" ~/.config/argos/cascadia.5s.sh"
+        echo "  Or run: python -m cascadia.flint.tray"
     fi
 fi
 
