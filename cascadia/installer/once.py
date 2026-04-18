@@ -1,5 +1,5 @@
 """
-once.py - Cascadia OS v0.21
+once.py - Cascadia OS v0.30
 ONCE: Installer software for Cascadia OS.
 
 Owns: environment checks, directory setup, database initialization,
@@ -8,8 +8,8 @@ Owns: environment checks, directory setup, database initialization,
 Does not own: process supervision (FLINT), operator execution,
               or runtime management.
 
-v0.21: Adds browser UI setup wizard at http://127.0.0.1:18780
-       Falls back to terminal prompts with --no-browser flag.
+v0.30: Merged from v0.21 + v0.29. Browser setup wizard, AI detection,
+       llama.cpp/Zyrcon AI local inference support, --no-browser flag.
 """
 from __future__ import annotations
 
@@ -26,8 +26,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-VERSION = '0.21'
-SETUP_PORT = 18780
+VERSION = "0.30"
+SETUP_PORT = 4010
 REQUIRED_PYTHON = (3, 11)
 
 DEFAULT_DIRS = [
@@ -50,7 +50,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         'heartbeat_file': './data/runtime/flint.heartbeat',
         'heartbeat_interval_seconds': 5,
         'heartbeat_stale_after_seconds': 15,
-        'status_port': 18791,
+        'status_port': 4011,
         'health_interval_seconds': 5,
         'drain_timeout_seconds': 10,
         'max_restart_attempts': 5,
@@ -60,17 +60,17 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         'signing_secret': '',
     },
     'components': [
-        {'name': 'crew',      'module': 'cascadia.registry.crew',            'port': 18800, 'tier': 1, 'heartbeat_file': './data/runtime/crew.heartbeat'},
-        {'name': 'vault',     'module': 'cascadia.memory.vault',             'port': 18801, 'tier': 1, 'heartbeat_file': './data/runtime/vault.heartbeat'},
-        {'name': 'sentinel',  'module': 'cascadia.security.sentinel',        'port': 18802, 'tier': 1, 'heartbeat_file': './data/runtime/sentinel.heartbeat'},
-        {'name': 'curtain',   'module': 'cascadia.encryption.curtain',       'port': 18803, 'tier': 1, 'heartbeat_file': './data/runtime/curtain.heartbeat'},
-        {'name': 'beacon',    'module': 'cascadia.orchestrator.beacon',      'port': 18804, 'tier': 2, 'heartbeat_file': './data/runtime/beacon.heartbeat', 'depends_on': ['crew']},
-        {'name': 'stitch',    'module': 'cascadia.automation.stitch',        'port': 18805, 'tier': 2, 'heartbeat_file': './data/runtime/stitch.heartbeat'},
-        {'name': 'vanguard',  'module': 'cascadia.gateway.vanguard',         'port': 18806, 'tier': 2, 'heartbeat_file': './data/runtime/vanguard.heartbeat'},
-        {'name': 'handshake', 'module': 'cascadia.bridge.handshake',         'port': 18807, 'tier': 2, 'heartbeat_file': './data/runtime/handshake.heartbeat'},
-        {'name': 'bell',      'module': 'cascadia.chat.bell',                'port': 18808, 'tier': 2, 'heartbeat_file': './data/runtime/bell.heartbeat'},
-        {'name': 'almanac',   'module': 'cascadia.guide.almanac',            'port': 18809, 'tier': 2, 'heartbeat_file': './data/runtime/almanac.heartbeat'},
-        {'name': 'prism',     'module': 'cascadia.dashboard.prism',          'port': 18810, 'tier': 3, 'heartbeat_file': './data/runtime/prism.heartbeat', 'depends_on': ['crew', 'sentinel', 'beacon']},
+        {'name': 'crew',      'module': 'cascadia.registry.crew',            'port': 5100, 'tier': 1, 'heartbeat_file': './data/runtime/crew.heartbeat'},
+        {'name': 'vault',     'module': 'cascadia.memory.vault',             'port': 5101, 'tier': 1, 'heartbeat_file': './data/runtime/vault.heartbeat'},
+        {'name': 'sentinel',  'module': 'cascadia.security.sentinel',        'port': 5102, 'tier': 1, 'heartbeat_file': './data/runtime/sentinel.heartbeat'},
+        {'name': 'curtain',   'module': 'cascadia.encryption.curtain',       'port': 5103, 'tier': 1, 'heartbeat_file': './data/runtime/curtain.heartbeat'},
+        {'name': 'beacon',    'module': 'cascadia.orchestrator.beacon',      'port': 6200, 'tier': 2, 'heartbeat_file': './data/runtime/beacon.heartbeat', 'depends_on': ['crew']},
+        {'name': 'stitch',    'module': 'cascadia.automation.stitch',        'port': 6201, 'tier': 2, 'heartbeat_file': './data/runtime/stitch.heartbeat'},
+        {'name': 'vanguard',  'module': 'cascadia.gateway.vanguard',         'port': 6202, 'tier': 2, 'heartbeat_file': './data/runtime/vanguard.heartbeat'},
+        {'name': 'handshake', 'module': 'cascadia.bridge.handshake',         'port': 6203, 'tier': 2, 'heartbeat_file': './data/runtime/handshake.heartbeat'},
+        {'name': 'bell',      'module': 'cascadia.chat.bell',                'port': 6204, 'tier': 2, 'heartbeat_file': './data/runtime/bell.heartbeat'},
+        {'name': 'almanac',   'module': 'cascadia.guide.almanac',            'port': 6205, 'tier': 2, 'heartbeat_file': './data/runtime/almanac.heartbeat'},
+        {'name': 'prism',     'module': 'cascadia.dashboard.prism',          'port': 6300, 'tier': 3, 'heartbeat_file': './data/runtime/prism.heartbeat', 'depends_on': ['crew', 'sentinel', 'beacon']},
     ],
 }
 
@@ -122,7 +122,7 @@ def _detect_ollama() -> Optional[List[str]]:
 
 class SetupServer:
     """
-    Serves the browser setup wizard on http://127.0.0.1:18780
+    Serves the browser setup wizard on http://127.0.0.1:4010
     Owns: serving setup.html, sysinfo API, apply API.
     Does not own: config persistence (OnceInstaller).
     """

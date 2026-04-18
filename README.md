@@ -10,7 +10,7 @@ Decades later — aerospace engineering in Moscow, automation projects for Amazo
 
 I didn't want a chatbot. I wanted an operator I could trust. Something that remembers, asks before acting, and picks up where it left off after a crash. Something designed for the moment when things go wrong at three in the morning and nobody is watching.
 
-**That's what this is.** → [Full story](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
+**That's what this is.** → [Full story](./STORY.md)
 
 ---
 
@@ -36,7 +36,7 @@ Cascadia OS is built to a different standard — durable enough to survive crash
 
 ---
 
-## ⚡ One-Click Install
+## One-Click Install
 
 **Mac / Linux:**
 ```bash
@@ -50,15 +50,18 @@ irm https://raw.githubusercontent.com/Zyrconlabs/cascadia-os/main/install.bat -O
 
 > **Requires:** Python 3.11+ and git
 
-The installer clones the repo, creates a virtual environment, installs the package, copies your config, runs first-time setup, and adds a `cascadia` launcher to your PATH.
+The installer clones the repo, creates a virtual environment, installs the package, runs the browser-based AI setup wizard, and adds a `cascadia` launcher to your PATH.
 
 ---
 
 ## Manual Start
 
 ```bash
-# First-time setup
+# First-time setup (opens browser wizard at http://127.0.0.1:4010)
 python -m cascadia.installer.once
+
+# Terminal-only setup (no browser)
+python -m cascadia.installer.once --no-browser
 
 # Start the OS (watchdog keeps FLINT alive)
 python -m cascadia.kernel.watchdog --config config.json
@@ -84,13 +87,19 @@ Cascadia OS coordinates AI operators that:
 
 ---
 
-## What is working right now
+## What is working right now (v0.30)
 
 ### Control plane
 | Module | What it does |
 |---|---|
 | FLINT `kernel/flint.py` | Process supervision, tiered startup, health polling, restart/backoff, graceful shutdown |
 | Watchdog `kernel/watchdog.py` | External FLINT liveness monitor — lives outside the supervision tree |
+
+### Installer
+| Module | What it does |
+|---|---|
+| ONCE `installer/once.py` | Browser setup wizard, RAM/GPU/Ollama detection, AI model config, directory init, manifest validation |
+| setup.html `installer/setup.html` | 4-step browser UI: system scan → model selection → config editor → launch |
 
 ### Durability layer
 | Module | What it does |
@@ -109,19 +118,19 @@ Cascadia OS coordinates AI operators that:
 | dependency_manager | Detects missing operators and permissions, writes blocked state |
 
 ### Named components
-| Name | What it does |
-|---|---|
-| CREW | Operator group registry with wildcard capability validation |
-| VAULT | Durable SQLite-backed memory, capability-gated |
-| SENTINEL | Risk classification: low / medium / high / critical per action |
-| CURTAIN | HMAC-SHA256 envelope signing and field encryption (stdlib only) |
-| BEACON | Capability-checked routing and operator handoffs |
-| STITCH | Workflow sequencing with built-in templates |
-| VANGUARD | Inbound channel normalization, outbound dispatch |
-| HANDSHAKE | External API connection registry |
-| BELL | Chat sessions and approval response collection |
-| ALMANAC | Component catalog, glossary, runbooks |
-| PRISM | Aggregated system visibility — runs, approvals, blocked, crew |
+| Name | Path | What it does |
+|---|---|---|
+| CREW | `registry/crew.py` | Operator group registry with wildcard capability validation |
+| VAULT | `memory/vault.py` | Durable SQLite-backed memory, capability-gated |
+| SENTINEL | `security/sentinel.py` | Risk classification: low / medium / high / critical per action |
+| CURTAIN | `encryption/curtain.py` | HMAC-SHA256 envelope signing and field encryption (stdlib only) |
+| BEACON | `orchestrator/beacon.py` | Capability-checked routing and operator handoffs |
+| STITCH | `automation/stitch.py` | Workflow sequencing with built-in templates |
+| VANGUARD | `gateway/vanguard.py` | Inbound channel normalization, outbound dispatch |
+| HANDSHAKE | `bridge/handshake.py` | External API connection registry |
+| BELL | `chat/bell.py` | Chat sessions and approval response collection |
+| ALMANAC | `guide/almanac.py` | Component catalog, glossary (26 terms), runbooks |
+| PRISM | `dashboard/prism.py` | Live dashboard at `localhost:6300/` — runs, approvals, blocked, crew |
 
 ---
 
@@ -140,19 +149,62 @@ These are tested in `tests/test_crash_recovery.py`. Not just claimed.
 
 ---
 
-## What is partial in v0.2
+## AI model setup
+
+ONCE supports four paths, selected in the browser wizard or terminal fallback:
+
+| Path | How |
+|---|---|
+| Local llama.cpp | Downloads Qwen 2.5 (3B / 7B / 14B) — private, no API cost |
+| Zyrcon AI | Points to your running `zyrcon-engine` on `localhost:7000` |
+| Cloud API | OpenAI, Anthropic, Groq, or any compatible endpoint |
+| Ollama | Detects running models at `localhost:11434` automatically |
+
+The browser wizard opens at `http://127.0.0.1:4010/` during install. Use `--no-browser` for headless or server installs.
+
+---
+
+## PRISM dashboard
+
+```bash
+# Live UI
+open http://127.0.0.1:6300/
+
+# API endpoints
+GET  http://127.0.0.1:6300/api/prism/overview    # Full system snapshot
+GET  http://127.0.0.1:6300/api/prism/runs        # Recent run states
+GET  http://127.0.0.1:6300/api/prism/approvals   # Pending human decisions
+GET  http://127.0.0.1:6300/api/prism/blocked     # Runs blocked on dependencies
+GET  http://127.0.0.1:6300/api/prism/crew        # Active operators
+GET  http://127.0.0.1:6300/api/prism/sentinel    # Risk levels
+GET  http://127.0.0.1:4011/health                # FLINT liveness check
+```
+
+---
+
+## What is partial in v0.30
 
 Present and registered, but not fully wired end-to-end yet:
 
-- **SENTINEL** — risk rules work; enforcement hooks into the full operator execution loop are v0.3
-- **CURTAIN** — HMAC signing works; AES-256-GCM and asymmetric key exchange are v0.3
-- **HANDSHAKE** — connection registry works; actual HTTP execution to external APIs is v0.3
-- **VANGUARD** — normalization works; real channel adapters (SMTP, SMS) are v0.3
+- **SENTINEL** — risk rules work; enforcement hooks into the full operator loop are v0.31
+- **CURTAIN** — HMAC signing works; AES-256-GCM and asymmetric key exchange are v0.31
+- **HANDSHAKE** — connection registry works; actual HTTP execution to external APIs is v0.31
+- **VANGUARD** — normalization works; real channel adapters (SMTP, SMS) are v0.31
+- **PRISM** — aggregation queries work; real-time WebSocket push is v0.31
 
 ---
 
 ## Roadmap
 
+### v0.31
+- SENTINEL enforcement wired end-to-end
+- CURTAIN AES-256-GCM + asymmetric key exchange
+- HANDSHAKE HTTP execution to external APIs
+- VANGUARD SMTP and SMS channel adapters
+- PRISM WebSocket real-time push
+- SCOUT operator — calendar and email implementation
+
+### v0.4+
 - GRID — decentralized compute network
 - DEPOT — operator marketplace
 - Scheduler and trigger manager
@@ -161,16 +213,25 @@ Present and registered, but not fully wired end-to-end yet:
 
 ---
 
-## PRISM dashboard
+## Port reference
 
-```bash
-GET  http://127.0.0.1:18810/api/prism/overview    # Full system snapshot
-GET  http://127.0.0.1:18810/api/prism/runs        # Recent run states
-GET  http://127.0.0.1:18810/api/prism/approvals   # Pending human decisions
-GET  http://127.0.0.1:18810/api/prism/blocked     # Runs blocked on dependencies
-GET  http://127.0.0.1:18810/api/prism/crew        # Active operators
-GET  http://127.0.0.1:18791/health                # FLINT liveness check
-```
+| Port | Band | Component |
+|---|---|---|
+| 4010 | 4xxx — kernel | ONCE setup wizard (install time only) |
+| 4011 | 4xxx — kernel | FLINT status API |
+| 5100 | 5xxx — foundation | CREW |
+| 5101 | 5xxx — foundation | VAULT |
+| 5102 | 5xxx — foundation | SENTINEL |
+| 5103 | 5xxx — foundation | CURTAIN |
+| 6200 | 6xxx — runtime | BEACON |
+| 6201 | 6xxx — runtime | STITCH |
+| 6202 | 6xxx — runtime | VANGUARD |
+| 6203 | 6xxx — runtime | HANDSHAKE |
+| 6204 | 6xxx — runtime | BELL |
+| 6205 | 6xxx — runtime | ALMANAC |
+| 6300 | 6xxx — visibility | PRISM (dashboard UI + API) |
+| 7000+ | 7xxx — operators | SCOUT, RECON, future operators |
+| 8200+ | 8xxx — expansion | GRID, DEPOT (roadmap) |
 
 ---
 
@@ -185,27 +246,15 @@ GET  http://127.0.0.1:18791/health                # FLINT liveness check
 
 ---
 
-## Why this exists
-
-I was five years old the first time I took apart a telephone. Not for school. Because I needed to understand how the sound got through the wire.
-
-Decades later — aerospace engineering in Moscow, automation projects for Amazon and the US Navy, building things at 2am while my daughter slept — I kept running into the same problem: AI that was impressive in demos and unreliable in production.
-
-I didn't want a chatbot. I wanted an operator I could trust. Something that remembers, asks before acting, and picks up where it left off after a crash. Something designed for the moment when things go wrong at three in the morning and nobody is watching.
-
-That's what this is.
-
-→ [Full story](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
-
----
-
 ## Docs
 
+- [Manual](./MANUAL.md)
+- [Changelog](./CHANGELOG.md)
 - [Contributing](./CONTRIBUTING.md)
 - [Security Policy](./SECURITY.md)
 - [Support](./SUPPORT.md)
-- [Story behind the project](https://github.com/Zyrconlabs/cascadia-os/blob/main/STORY.md)
+- [Story behind the project](./STORY.md)
 
 ---
 
-*Built in Houston, Texas — [Zyrcon Labs](https://github.com/zyrconlabs)*
+*Built in Houston, Texas — [Zyrcon Labs](https://zyrconlabs.com)*

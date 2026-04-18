@@ -102,7 +102,7 @@ info "Starting Cascadia OS..."
 source "$VENV_DIR/bin/activate"
 nohup "$VENV_DIR/bin/python" -m cascadia.kernel.watchdog --config "$INSTALL_DIR/config.json" > "$INSTALL_DIR/data/logs/watchdog.log" 2>&1 &
 sleep 4
-if [[ "$(uname)" == "Darwin" ]]; then open "http://127.0.0.1:18810" 2>/dev/null || true; fi
+if [[ "$(uname)" == "Darwin" ]]; then open "http://127.0.0.1:6300" 2>/dev/null || true; fi
 
 # ── 10. Done ──────────────────────────────────────────────────────────────────
 echo ""

@@ -1,194 +1,227 @@
-# Cascadia Kernel Stack v2.1 Manual
+# Cascadia OS v0.30 — Manual
 
 ## Purpose
-Cascadia v2.1 is the first build that turns the latest design direction into a practical stack:
-- the **kernel remains small and supervisory**
-- durable execution is strengthened with **queryable side effects** and **queryable approvals**
-- operator-assets are described by a common **manifest schema**
-- missing dependencies and gated actions become visible runtime states instead of hidden failure modes
 
-## Architecture in one view
+v0.30 is the first fully merged release. It consolidates:
+- The complete kernel and durability layer from v0.21/v0.29
+- The browser-based AI setup wizard (ONCE) from v0.21
+- The PRISM live dashboard UI restored from v0.21
+- The `_send_html` routing capability in service_runtime
+- Zyrcon AI as a supported local inference backend alongside llama.cpp and Ollama
+
+The kernel remains small and supervisory. Durable execution is proven by crash tests. The installer now guides non-technical users through AI model selection in a browser UI.
+
+---
+
+## Architecture
+
+### Startup tiers
+
+FLINT starts components in dependency order:
+
+| Tier | Components | Depends on |
+|---|---|---|
+| 1 | CREW, VAULT, SENTINEL, CURTAIN | — |
+| 2 | BEACON, STITCH, VANGUARD, HANDSHAKE, BELL, ALMANAC | CREW (BEACON only) |
+| 3 | PRISM | CREW, SENTINEL, BEACON |
+
+Each tier waits for all components in the previous tier to report healthy before proceeding.
+
 ### Kernel layer
+
 Owns:
-- process lifecycle
-- dependency-tier startup
-- health polling
-- restart with backoff
-- graceful draining and shutdown
-- top-level system status
+- Process lifecycle (start, health poll, restart with backoff, graceful shutdown)
+- Dependency-tier startup sequencing
+- External watchdog liveness monitoring
+- Top-level system status at `localhost:4011`
 
-Does not own:
-- workflow planning
-- task scheduling
-- approval UI
-- installer/store logic
-- merge/workspace logic
-
-### Core runtime services
-- `queue.py` — priority queue service
-- `town.py` — operator registry / message hub
-- `router.py` — capability-aware routing stub
-- `sentinel.py` — resource arbitration stub
-- `vault_api.py` — memory access service
+Does not own: workflow planning, task scheduling, approval UI, installer logic.
 
 ### Durability layer
-- `run_store.py`
-- `migration.py`
-- `step_journal.py`
-- `idempotency.py`
-- `resume_manager.py`
+
+The most important part. Every run is journaled to SQLite before any side effect executes.
+
+- `run_store.py` — run records, process_state + run_state split
+- `step_journal.py` — append-only step ledger, source of truth for resume
+- `resume_manager.py` — calculates safe resume point from committed steps
+- `idempotency.py` — SHA-256 keyed side effect records, UNIQUE constraint prevents double-execution
+- `migration.py` — idempotent schema migrations, handles legacy DB upgrades
 
 ### Policy and gating
-- `runtime_policy.py`
-- `approval_store.py`
-- `dependency_manager.py`
 
-### Observability
-- `run_trace.py`
+- `runtime_policy.py` — allow / deny / approval_required per action type
+- `approval_store.py` — persists approval requests and decisions, wakes blocked runs
+- `dependency_manager.py` — detects missing operators/permissions, writes blocked state
 
-### Operator assets
-Starter manifests included:
-- `main_operator.json`
-- `gmail_operator.json`
-- `calendar_operator.json`
+---
 
 ## State model
+
 ### ProcessState
-- `starting`
-- `ready`
-- `degraded`
-- `draining`
-- `offline`
+- `starting` — process launched, not yet ready
+- `ready` — health check passing
+- `degraded` — health check failing but process alive
+- `draining` — shutdown in progress
+- `offline` — process not running
 
 ### RunState
-- `pending`
-- `running`
-- `blocked`
-- `retrying`
-- `waiting_human`
-- `poisoned`
-- `complete`
-- `failed`
-- `abandoned`
+- `pending` — queued, not started
+- `running` — actively executing
+- `blocked` — waiting on a missing dependency or permission
+- `retrying` — resuming after a crash or failure
+- `waiting_human` — approval required before proceeding
+- `poisoned` — permanently failed, will never resume
+- `complete` — finished successfully
+- `failed` — failed with no retry
+- `abandoned` — timed out or manually cancelled
 
-v2.1 deliberately uses `retrying` instead of a separate `resuming` state.
+---
 
 ## Database schema
-Tables:
-- `meta`
-- `runs`
-- `steps`
-- `side_effects`
-- `approvals`
-- `run_trace`
+
+Tables: `meta`, `runs`, `steps`, `side_effects`, `approvals`, `run_trace`
 
 ### runs
-Key columns:
-- `run_id`
-- `operator_id`
-- `tenant_id`
-- `goal`
-- `current_step`
-- `input_snapshot`
-- `state_snapshot`
-- `retry_count`
-- `last_checkpoint`
-- `process_state`
-- `run_state`
-- `blocked_reason`
-- `blocking_entity`
-- `dependency_request`
-- `created_at`
-- `updated_at`
+Key columns: `run_id`, `operator_id`, `tenant_id`, `goal`, `current_step`, `input_snapshot`, `state_snapshot`, `retry_count`, `last_checkpoint`, `process_state`, `run_state`, `blocked_reason`, `blocking_entity`, `dependency_request`, `created_at`, `updated_at`
 
 ### steps
-Append-only step ledger.
-`step_index` is **0-based**.
+Append-only step ledger. `step_index` is 0-based.
 
 ### side_effects
-One row per external action.
-Statuses: `planned`, `committed`, `failed`, `compensated`.
+One row per external action. Statuses: `planned`, `committed`, `failed`, `compensated`.
 
 ### approvals
-One row per approval request/decision.
-Decisions: `pending`, `approved`, `denied`.
+One row per approval request/decision. Decisions: `pending`, `approved`, `denied`.
+
+---
 
 ## Runtime flows
+
 ### Resume flow
-1. load run
-2. scan completed steps in ascending order
-3. stop at the first incomplete step or a step whose side effects are not fully committed
-4. restore state from the last fully committed step
-5. resume from `last_committed + 1`
+1. Load run from `run_store`
+2. Scan completed steps in ascending `step_index` order
+3. Stop at the first step whose side effects are not fully committed
+4. Restore state from the last fully committed step
+5. Resume from `last_committed + 1`
 
 ### Approval-aware resume
-If a run is `waiting_human` and approval is still pending, it does not auto-resume.
-If approved, `approval_store.py` moves the run to `retrying`.
-If denied, the run becomes `failed`.
+- If run is `waiting_human` and approval is `pending` — does not auto-resume
+- If `approved` — `approval_store` transitions run to `retrying`
+- If `denied` — run transitions to `failed`
 
 ### Dependency blocking
-`dependency_manager.py` checks:
-- required operators installed and healthy
-- requested permissions granted
+`dependency_manager` checks required operators are installed and healthy, and requested permissions are granted. If anything is missing it writes `run_state = blocked` with `blocked_reason`, `blocking_entity`, and `dependency_request`. It does not install, fix, or retry dependencies.
 
-If something is missing, it writes:
-- `run_state = blocked`
-- `blocked_reason`
-- `blocking_entity`
-- `dependency_request`
+---
 
-It does **not** install, fix, or retry dependencies.
+## AI configuration
 
-## Operator-asset manifest
+### Browser wizard (default)
+
+Running `python -m cascadia.installer.once` opens `http://127.0.0.1:4010/` with a 4-step wizard:
+
+1. System scan — RAM, GPU, Ollama detection, Python version
+2. AI model selection — QuickStart or manual (local / cloud / Ollama / skip)
+3. Config editor — editable JSON block, live validation
+4. Launch — start commands, link to PRISM
+
+### Terminal fallback
+
+```bash
+python -m cascadia.installer.once --no-browser
+```
+
+Prompts through the same four paths interactively.
+
+### Supported AI backends
+
+| Provider | config.json `provider` value |
+|---|---|
+| Local llama.cpp | `llama-cpp` |
+| Zyrcon AI (zyrcon-engine) | `llama-cpp` with `base_url: http://localhost:7000` |
+| Ollama | `ollama` |
+| OpenAI | `openai` |
+| Anthropic | `anthropic` |
+| Groq | `groq` |
+| Any OpenAI-compatible | `custom` |
+
+---
+
+## Operator manifest schema
+
 Fields:
-- `id`
-- `name`
-- `version`
-- `type` (`system`, `service`, `skill`, `composite`)
-- `capabilities`
-- `required_dependencies`
-- `requested_permissions`
-- `autonomy_level` (`manual_only`, `assistive`, `semi_autonomous`, `autonomous`)
-- `health_hook`
-- `description`
+- `id` — unique operator identifier
+- `name` — display name
+- `version` — semver
+- `type` — `system`, `service`, `skill`, or `composite`
+- `capabilities` — list of capability strings the operator provides
+- `required_dependencies` — operators that must be present and healthy
+- `requested_permissions` — permissions the operator needs
+- `autonomy_level` — `manual_only`, `assistive`, `semi_autonomous`, or `autonomous`
+- `health_hook` — HTTP path for health checks
+- `description` — human-readable description
 
-Important: `autonomy_level` is metadata only in v2.1.
+---
 
 ## Runbook
+
+### First-time install
+```bash
+python -m cascadia.installer.once
+```
+
+### Start the OS
+```bash
+python -m cascadia.kernel.watchdog --config config.json
+```
+
+### Check system status
+```bash
+curl http://127.0.0.1:4011/api/flint/status
+```
+
+### Open PRISM dashboard
+```bash
+open http://127.0.0.1:6300/
+```
+
 ### Run tests
 ```bash
 python -m unittest discover -s tests -v
-```
-
-### Start stack
-```bash
-python -m cascadia.watchdog --config config.json
-```
-
-### Query kernel status
-```bash
-curl http://127.0.0.1:18791/api/kernel/status
+python tests/test_crash_recovery.py
 ```
 
 ### Troubleshooting
-- If the kernel restarts repeatedly, check heartbeat paths, ports, and component logs in `data/logs`.
-- If a run resumes from the wrong step, inspect `steps` and `side_effects`.
-- If approval never wakes a run, inspect `approvals` and the run’s `run_state`.
-- If a dependency block is unclear, inspect `blocked_reason`, `blocking_entity`, and `dependency_request`.
 
-## Not in v2.1
-Deliberately excluded:
-- workflow planner
-- scheduler
-- trigger manager
-- handoff policy
-- operator store / installer / updater
-- workspace manager / merge manager
-- permission broker
-- autonomy enforcement engine
-- multi-node HA
-- microVM isolation
+- **Component restarts repeatedly** — check heartbeat paths and ports in `config.json`, inspect logs in `data/logs/`
+- **Run resumes from wrong step** — inspect `steps` and `side_effects` tables
+- **Approval never wakes a run** — inspect `approvals` table and run's `run_state`
+- **Dependency block unclear** — inspect `blocked_reason`, `blocking_entity`, `dependency_request` in `runs` table
+- **PRISM shows blank** — confirm `prism.html` is present at `cascadia/dashboard/prism.html`
+- **Setup wizard 500 error** — confirm `setup.html` is present at `cascadia/installer/setup.html`
 
-## Bottom line
-This stack is designed to be **trustworthy before clever**.
-It locks the data model, proves the resume path, adds operator metadata, and makes dependency and approval gating explicit.
+---
+
+## Not in v0.30
+
+Deliberately deferred:
+
+- SENTINEL enforcement hooks into operator execution loop
+- CURTAIN AES-256-GCM / asymmetric key exchange
+- HANDSHAKE HTTP execution to external APIs
+- VANGUARD SMTP / SMS channel adapters
+- PRISM WebSocket real-time push
+- SCOUT calendar and email operator implementation
+- Workflow scheduler / trigger manager
+- MicroVM operator isolation
+- Multi-node HA / GRID
+
+---
+
+## Design principles
+
+1. **Trustworthy before clever.** Prove the data model before adding features.
+2. **Own your layer.** Execution does not own policy. Policy does not own storage.
+3. **Explicit blocking.** A blocked run stays blocked until a human or system event resolves it.
+4. **Journal first.** No side effect executes before it is written to the step journal.
+5. **Idempotency at the DB layer.** Not by convention — by UNIQUE constraint.
