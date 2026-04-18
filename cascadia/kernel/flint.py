@@ -1,12 +1,12 @@
 """
-flint.py — Cascadia OS v0.2
+flint.py — Cascadia OS v0.34
 FLINT: Server and OS control layer.
 
 Owns: process lifecycle, readiness-gated startup, health supervision,
       restart/backoff, graceful shutdown, resource-governance entrypoint.
 Does not own: workflow planning, scheduler logic, approval UI, store mechanics.
 """
-# MATURITY: PRODUCTION — Full supervision core. All v0.2 scope complete.
+# MATURITY: PRODUCTION
 from __future__ import annotations
 
 import argparse
@@ -249,7 +249,7 @@ class Flint:
         threading.Thread(target=self._serve_status, daemon=True, name='flint-status').start()
         self.start_tiers()
         self.process_state = 'ready'
-        self.logger.info('FLINT ready — Cascadia OS v0.2')
+        self.logger.info('FLINT ready — Cascadia OS v0.34')
         self.monitor_loop()
 
 

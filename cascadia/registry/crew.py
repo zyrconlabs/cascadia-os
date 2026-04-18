@@ -1,5 +1,5 @@
 """
-crew.py - Cascadia OS v0.2
+crew.py - Cascadia OS v0.34
 CREW: Operator group registry and message hub.
 Tracks registered operators and routes messages between them.
 Validates capability manifests on every inbound route.

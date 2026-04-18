@@ -1,1 +1,1 @@
-# STITCH - Cascadia OS v0.2 workflow automation
+# STITCH - Cascadia OS v0.34 workflow automation

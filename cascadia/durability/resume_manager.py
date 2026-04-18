@@ -1,5 +1,5 @@
 """
-durability/resume_manager.py - Cascadia OS v0.2
+durability/resume_manager.py - Cascadia OS v0.34
 Owns safe resume-point calculation from the step journal and side_effects table.
 Does NOT own step execution, scheduling, or approval UI.
 

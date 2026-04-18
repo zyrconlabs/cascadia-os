@@ -1,5 +1,5 @@
 """
-vault.py - Cascadia OS v0.2
+vault.py - Cascadia OS v0.34
 VAULT: Private institutional memory.
 Structured durable storage for operator knowledge, customer context,
 approved outputs, and shared memory. Capability-checked on every access.
@@ -104,7 +104,7 @@ class VaultService:
         if not operator_id:
             return 400, {'error': 'operator_id required'}
         # In production: call CREW /validate endpoint
-        # For v0.2: trust declared capabilities in payload
+        # Capability validation — cross-check against SENTINEL in v0.35
         caps = payload.get('capabilities', [])
         has_cap = required in caps or any(c.endswith('*') and required.startswith(c[:-1]) for c in caps)
         if not has_cap:

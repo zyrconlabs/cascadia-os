@@ -1,5 +1,5 @@
 """
-almanac/almanac.py - Cascadia OS v0.2
+almanac/almanac.py - Cascadia OS v0.34
 ALMANAC: Field guide, documentation, and operator knowledge base.
 
 Owns: component catalog, operator playbooks, term definitions,

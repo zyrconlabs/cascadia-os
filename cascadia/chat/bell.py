@@ -1,5 +1,5 @@
 """
-bell/bell.py - Cascadia OS v0.2
+bell/bell.py - Cascadia OS v0.34
 BELL: Inbound chat interface and human-in-the-loop handler.
 
 Owns: message ingestion from humans, chat session management,
@@ -144,7 +144,7 @@ class BellService:
             'BELL approval %s: %s by session %s', approval_id, decision, session_id
         )
         # In a full build: forward to approval_store service via HTTP
-        # For v0.2: return the decision for the operator to collect
+        # Returns decision — ApprovalStore forwarding wired in v0.35
         return 200, {
             'approval_id': approval_id,
             'decision': decision,

@@ -1,5 +1,5 @@
 """
-curtain/curtain.py - Cascadia OS v0.33
+curtain/curtain.py - Cascadia OS v0.34
 CURTAIN: Encryption layer for Cascadia OS.
 
 Owns: transport encryption, at-rest data protection, key derivation,
@@ -15,7 +15,7 @@ Cryptographic primitives:
                       128-bit authentication tag — tamper detection built in
                       No length truncation — full plaintext preserved
 
-Upgrade from v0.2: encrypt_field/decrypt_field replaced from XOR+SHA256
+Upgrade: encrypt_field/decrypt_field replaced from XOR+SHA256
 keystream (placeholder, no authentication, 32-byte limit) to AES-256-GCM
 (authenticated encryption, arbitrary length, tamper-evident).
 Public interface is unchanged — callers require no modification.

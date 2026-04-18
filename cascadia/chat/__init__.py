@@ -1,1 +1,1 @@
-# BELL - Cascadia OS v0.2 inbound chat interface
+# BELL - Cascadia OS v0.34 inbound chat interface

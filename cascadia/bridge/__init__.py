@@ -1,1 +1,1 @@
-# HANDSHAKE - Cascadia OS v0.2 API bridge
+# HANDSHAKE - Cascadia OS v0.34 API bridge

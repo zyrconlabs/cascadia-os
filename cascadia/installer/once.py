@@ -1,5 +1,5 @@
 """
-once.py - Cascadia OS v0.32
+once.py - Cascadia OS v0.34
 ONCE: Installer software for Cascadia OS.
 
 Owns: environment checks, directory setup, database initialization,
@@ -8,7 +8,7 @@ Owns: environment checks, directory setup, database initialization,
 Does not own: process supervision (FLINT), operator execution,
               or runtime management.
 
-v0.32: Merged from v0.21 + v0.29. Browser setup wizard, AI detection,
+Browser setup wizard, AI detection,
        llama.cpp/Zyrcon AI local inference support, --no-browser flag.
 """
 from __future__ import annotations

@@ -1,5 +1,5 @@
 """
-beacon.py - Cascadia OS v0.2
+beacon.py - Cascadia OS v0.34
 BEACON: Orchestrator and capability-aware router.
 Decides which operator handles a task, routes messages between operators,
 and checks capability manifests on every route.

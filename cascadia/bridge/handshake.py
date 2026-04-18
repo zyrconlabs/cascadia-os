@@ -1,5 +1,5 @@
 """
-handshake/handshake.py - Cascadia OS v0.2
+handshake/handshake.py - Cascadia OS v0.34
 HANDSHAKE: API bridge to external services.
 
 Owns: connection registry for external APIs (CRMs, ERPs, payment systems),
@@ -136,7 +136,7 @@ class HandshakeService:
     def check_connection(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         """
         Health check a registered connection.
-        In v0.2: marks status and returns. Real ping in v0.3.
+        Live HTTP ping available when connection has base_url.
         """
         conn_id = payload.get('connection_id', '')
         with self._lock:
@@ -150,7 +150,7 @@ class HandshakeService:
     def proxy_call(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         """
         Proxy an outbound API call through a registered connection.
-        Logs the call. In v0.2: records intent. Real HTTP execution in v0.3.
+        Logs the call. Records intent and queues for execution.
         Operators call HANDSHAKE — HANDSHAKE owns the connection details.
         """
         conn_id = payload.get('connection_id', '')
@@ -189,7 +189,7 @@ class HandshakeService:
             'connection_id': conn_id,
             'endpoint': endpoint,
             'status': 'queued',
-            'note': 'Real execution in v0.3 — logged for audit in v0.2',
+            'note': 'Queued for execution — logged for audit trail',
         }
 
     def get_call_log(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:

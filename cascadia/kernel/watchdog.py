@@ -1,5 +1,5 @@
 """
-watchdog.py - Cascadia OS v0.2
+watchdog.py - Cascadia OS v0.34
 External FLINT liveness monitor. Lives outside the supervision tree.
 Monitors FLINT heartbeat only. Has no knowledge of operators or workflows.
 If this file grows complex, that is a design error.
@@ -36,7 +36,7 @@ class Watchdog:
         self.start_flint()
 
     def run(self) -> None:
-        self.logger.info('Watchdog active - Cascadia OS v0.2')
+        self.logger.info('Watchdog active - Cascadia OS v0.34')
         self.start_flint()
         while True:
             time.sleep(5)

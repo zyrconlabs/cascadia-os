@@ -1,1 +1,1 @@
-# ONCE - Cascadia OS v0.2 installer
+# ONCE - Cascadia OS v0.34 installer

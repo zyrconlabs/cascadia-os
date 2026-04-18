@@ -1,1 +1,1 @@
-# CURTAIN - Cascadia OS v0.2 encryption layer
+# CURTAIN - Cascadia OS v0.34 encryption layer
