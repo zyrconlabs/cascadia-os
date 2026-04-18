@@ -13,7 +13,7 @@
   --accent:#4facfe;--accent2:#00f2fe;
   --prism-a:#4facfe;--prism-b:#a78bfa;--prism-c:#34d399;--prism-d:#f472b6;
   --gold:#D4AF37;
-  --navy-900:#0a0a0a;--navy-800:#0a0a0a;--navy-700:#4a5568;
+  --navy-900:#111827;--navy-800:#374151;--navy-700:#4a5568;
   --navy-600:#4facfe;--navy-500:#4facfe;
   --navy-400:#94a3b8;--navy-300:#94a3b8;--navy-200:#e8edf4;
   --navy-100:#f0f4f8;--navy-50:#f5f7fa;
@@ -35,49 +35,49 @@ button{cursor:pointer;font-family:var(--font)}input,textarea,select{font-family:
 
 /* ── LAYOUT ── */
 .app{display:flex;height:100vh;width:100%}
-.nav-rail{width:var(--nav-w);min-width:var(--nav-w);background:var(--navy-900);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:2px;z-index:10}
-.nav-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--prism-a),var(--prism-b));border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:14px;font-weight:700;color:#4a5568;letter-spacing:-.5px}
-.nav-btn{width:36px;height:36px;border-radius:9px;border:none;background:transparent;color:#4a5568;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative;flex-shrink:0}
-.nav-btn:hover{background:rgba(167,139,250,.15);color:#6d28d9}
-.nav-btn--active{background:rgba(167,139,250,.2);color:#7c3aed}
+.nav-rail{width:var(--nav-w);min-width:var(--nav-w);background:#a78bfa;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:2px;z-index:10}
+.nav-logo{width:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:12px;gap:0}.nav-logo-text{font-size:9px;font-weight:800;letter-spacing:.18em;color:#fff;text-transform:uppercase;line-height:1}.nav-logo-bar{width:24px;height:2px;background:linear-gradient(90deg,var(--prism-a),var(--prism-b),var(--prism-c),var(--prism-d));border-radius:2px;margin-top:3px}
+.nav-btn{width:36px;height:36px;border-radius:9px;border:none;background:transparent;color:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative;flex-shrink:0}
+.nav-btn:hover{background:rgba(255,255,255,.2);color:#fff}
+.nav-btn--active{background:rgba(255,255,255,.3);color:#fff}
 .nav-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
-.nav-divider{width:24px;height:1px;background:rgba(255,255,255,.08);margin:4px 0}
-.nav-tooltip{position:absolute;left:46px;background:var(--navy-800);color:var(--white);font-size:11px;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100}
+.nav-divider{width:24px;height:1px;background:rgba(255,255,255,.25);margin:4px 0}
+.nav-tooltip{position:absolute;left:46px;background:#7c3aed;color:#fff;font-size:11px;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100}
 .nav-btn:hover .nav-tooltip{opacity:1}
-.nav-badge{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--gold);border:1.5px solid #0a0a0a}
+.nav-badge{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--gold);border:1.5px solid #a78bfa}
 
 /* ── SIDEBAR ── */
-.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);border-right:1px solid rgba(167,139,250,.25);display:flex;flex-direction:column;background:#a78bfa;height:100vh}
-.sidebar__header{height:var(--topbar-h);min-height:var(--topbar-h);display:flex;align-items:center;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.2);gap:10px}
-.sidebar__title{font-size:13px;font-weight:700;color:#fff}
-.sidebar__sub{font-family:var(--mono);font-size:9px;font-weight:500;color:rgba(255,255,255,.65);letter-spacing:.06em;margin-top:1px}
-.sidebar__search{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.15)}
-.sidebar__search input{width:100%;height:32px;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:0 10px;font-size:12px;color:#fff;background:rgba(255,255,255,.15);outline:none;transition:border-color .15s}
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);border-right:1px solid var(--gray-200);display:flex;flex-direction:column;background:var(--gray-50);height:100vh}
+.sidebar__header{height:var(--topbar-h);min-height:var(--topbar-h);display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--gray-200);gap:10px;background:#ffffff}
+.sidebar__title{font-size:13px;font-weight:700;color:var(--navy-800)}
+.sidebar__sub{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--gray-400);letter-spacing:.06em;margin-top:1px}
+.sidebar__search{padding:10px 12px;border-bottom:1px solid var(--gray-150);background:#f5f7fa}
+.sidebar__search input{width:100%;height:32px;border:1px solid var(--gray-200);border-radius:8px;padding:0 10px;font-size:12px;color:var(--navy-900);background:#fff;outline:none;transition:border-color .15s}
 .sidebar__search input:focus{border-color:var(--navy-300)}
-.sidebar__search input::placeholder{color:rgba(255,255,255,.55)}
+.sidebar__search input::placeholder{color:var(--gray-400)}
 .sidebar__list{flex:1;overflow-y:auto;padding:4px 0}
-.sidebar__section{font-family:var(--mono);font-size:9px;font-weight:500;color:rgba(255,255,255,.6);letter-spacing:.1em;text-transform:uppercase;padding:10px 16px 5px}
-.sidebar__footer{padding:10px 12px;border-top:1px solid rgba(255,255,255,.15)}
-.sidebar__add{width:100%;height:32px;border:1px dashed rgba(255,255,255,.4);border-radius:8px;background:transparent;font-size:12px;color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+.sidebar__section{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--gray-400);letter-spacing:.1em;text-transform:uppercase;padding:10px 16px 5px}
+.sidebar__footer{padding:10px 12px;border-top:1px solid var(--gray-150);background:#f5f7fa}
+.sidebar__add{width:100%;height:32px;border:1px dashed var(--gray-300);border-radius:8px;background:transparent;font-size:12px;color:var(--gray-500);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
 .sidebar__add:hover{border-color:var(--prism-a);color:var(--prism-a);background:rgba(79,172,254,.04)}
 
 /* ── CELL ITEMS ── */
-.cell-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;transition:background .12s;border-bottom:1px solid rgba(255,255,255,.1)}
-.cell-item:hover{background:rgba(255,255,255,.12)}
-.cell-item--active{background:rgba(255,255,255,.22);box-shadow:inset 3px 0 0 #fff}
-.cell-item--active:hover{background:rgba(255,255,255,.22)}
+.cell-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--gray-100)}
+.cell-item:hover{background:var(--gray-100)}
+.cell-item--active{background:var(--white);box-shadow:inset 3px 0 0 var(--prism-a)}
+.cell-item--active:hover{background:var(--white)}
 .cell-item--beacon{border-bottom:2px solid var(--gray-200);padding:13px 16px}
 .cell-avatar{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;position:relative}
 .cell-avatar--beacon{background:linear-gradient(135deg,var(--prism-a),var(--prism-b));color:#fff;border-radius:50%}
 .cell-avatar--worker{background:#4a5568;color:#fff}
-.cell-avatar--cell{background:var(--surface);color:var(--prism-a)}
-.cell-dot{position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;border:2px solid #a78bfa}
-.cell-item--active .cell-dot{border-color:rgba(255,255,255,.3)}
+.cell-avatar--cell{background:#4a5568;color:#fff}
+.cell-dot{position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--gray-50)}
+.cell-item--active .cell-dot{border-color:var(--white)}
 .dot--online{background:var(--green);box-shadow:0 0 5px var(--green-glow)}
 .dot--standby{background:var(--yellow)}
 .dot--offline{background:var(--red)}
 .cell-body{flex:1;min-width:0}
-.cell-name{font-size:13px;font-weight:600;color:#fff}
+.cell-name{font-size:13px;font-weight:600;color:var(--navy-800)}
 .cell-role{font-size:11px;color:var(--gray-500);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cell-meta{display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap}
 .tag{font-family:var(--mono);font-size:9.5px;font-weight:500;padding:2px 6px;border-radius:4px}
@@ -88,8 +88,8 @@ button{cursor:pointer;font-family:var(--font)}input,textarea,select{font-family:
 /* ── MAIN ── */
 .main{flex:1;display:flex;flex-direction:column;height:100vh;min-width:0;background:var(--white)}
 .main__empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
-.main__empty svg{width:40px;height:40px;stroke:var(--gray-300);fill:none;stroke-width:1.2}
-.main__empty p{font-size:15px;font-weight:600;color:var(--navy-400)}.main__empty span{font-size:12px;color:var(--gray-400)}
+.main__empty svg{width:40px;height:40px;stroke:var(--gray-400);fill:none;stroke-width:1.2}
+.main__empty p{font-size:15px;font-weight:600;color:var(--navy-700)}.main__empty span{font-size:12px;color:var(--gray-500)}
 
 /* ── TOP BAR ── */
 .topbar{height:var(--topbar-h);min-height:var(--topbar-h);display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--gray-200);flex-shrink:0;gap:10px}
@@ -402,7 +402,7 @@ input[type="file"]{display:none}
 <body>
 <div class="app">
   <nav class="nav-rail" id="nav-rail">
-    <div class="nav-logo">C</div>
+    <div class="nav-logo"><span class="nav-logo-text">PRISM</span><div class="nav-logo-bar"></div></div>
     <button class="nav-btn nav-btn--active" onclick="switchSurface('ops')" id="nav-ops"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="nav-tooltip">Ops</span></button>
     <button class="nav-btn" onclick="switchSurface('runs')" id="nav-runs"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="nav-tooltip">Runs</span></button>
     <button class="nav-btn" onclick="switchSurface('obs')" id="nav-obs"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span class="nav-tooltip">Observability</span></button>
@@ -416,7 +416,7 @@ input[type="file"]{display:none}
 
   <aside class="sidebar" id="sidebar">
     <div class="sidebar__header">
-      <div style="flex:1;min-width:0"><div class="sidebar__title">PRISM · Dashboard</div><div class="sidebar__sub">Cascadia OS v0.33</div></div>
+      <div style="flex:1;min-width:0"><div class="sidebar__title">PRISM · Dashboard</div><div class="sidebar__sub">Cascadia OS v0.34</div></div>
       <div id="conn-dot" style="width:7px;height:7px;border-radius:50%;background:var(--gray-300);flex-shrink:0" title="Gateway status"></div>
     </div>
     <div class="sidebar__search"><input type="text" placeholder="Search operators…" oninput="filterCells(this.value)"></div>
@@ -1045,7 +1045,7 @@ function renderSidebar() {
     const avCls=c.isWorker?'cell-avatar--worker':'cell-avatar--cell';
     const pend=S.approvals.filter(ap=>ap.workerId===c.id&&ap.status==='pending').length;
     const runCount=(S.runs[c.id]||[]).length;
-    html+=`<div class="cell-item${a}" onclick="selectCell('${c.id}')"><div class="cell-avatar ${avCls}">${initials(c.name)}<div class="cell-dot ${d}"></div></div><div class="cell-body"><div class="cell-name">${esc(c.name)}</div><div class="cell-role">${esc(c.role)}</div><div class="cell-meta"><span class="tag ${tg}">${lb}</span><span class="tag ${c.isWorker?'tag--worker':'tag--neutral'}">${c.isWorker?'Worker':'Cell'}</span>${pend?`<span class="tag tag--approval">⚠${pend}</span>`:''}${runCount?`<span class="tag tag--neutral">${runCount} runs</span>`:''}</div></div></div>`;
+    html+=`<div class="cell-item${a}" onclick="selectCell('${c.id}')"><div class="cell-avatar ${avCls}">${initials(c.name)}<div class="cell-dot ${d}"></div></div><div class="cell-body"><div class="cell-name">${esc(c.name)}</div><div class="cell-role">${esc(c.role)}</div><div class="cell-meta"><span class="tag ${tg}">${lb}</span><span class="tag ${c.isWorker?'tag--worker':'tag--neutral'}">${c.isWorker?'Worker':'Operator'}</span>${pend?`<span class="tag tag--approval">⚠${pend}</span>`:''}${runCount?`<span class="tag tag--neutral">${runCount} runs</span>`:''}</div></div></div>`;
   });
   list.innerHTML=html;
 }
