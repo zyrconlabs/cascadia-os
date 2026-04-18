@@ -25,6 +25,41 @@ echo "  ║       Cascadia OS v0.34 Installer     ║"
 echo "  ╚══════════════════════════════════════╝"
 echo ""
 
+
+# ── 0. Mac prerequisites — Homebrew and SwiftBar ──────────────────────────────
+if [[ "$(uname)" == "Darwin" ]]; then
+    # Install Homebrew if not present
+    if ! command -v brew &>/dev/null; then
+        info "Homebrew not found — installing..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        # Add brew to PATH for Apple Silicon and Intel
+        if [[ -f "/opt/homebrew/bin/brew" ]]; then
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+        elif [[ -f "/usr/local/bin/brew" ]]; then
+            eval "$(/usr/local/bin/brew shellenv)"
+        fi
+        success "Homebrew installed"
+    else
+        success "Homebrew found: $(brew --version | head -1)"
+    fi
+
+    # Install SwiftBar if not present
+    if [[ ! -d "/Applications/SwiftBar.app" ]] && [[ ! -d "$HOME/Applications/SwiftBar.app" ]]; then
+        info "SwiftBar not found — installing via Homebrew..."
+        brew install --cask swiftbar
+        success "SwiftBar installed"
+    else
+        success "SwiftBar found"
+    fi
+
+    # Open SwiftBar so it registers and creates its plugin folder
+    if [[ ! -d "$HOME/Library/Application Support/SwiftBar/Plugins" ]]; then
+        info "Launching SwiftBar to initialise plugin folder..."
+        open -a SwiftBar
+        sleep 3
+    fi
+fi
+
 # ── 1. Check Python ───────────────────────────────────────────────────────────
 info "Checking Python version..."
 PYTHON=""
@@ -197,15 +232,26 @@ PLIST
         info "launchctl load failed — run manually: launchctl load $PLIST_PATH"
 
     # Add SwiftBar to Login Items so it auto-launches at boot
-    SWIFTBAR_APP=$(mdfind "kMDItemCFBundleIdentifier == 'com.ameba.SwiftBar'" 2>/dev/null | head -1)
+    # Find SwiftBar — check common locations
+    SWIFTBAR_APP=""
+    for candidate in "/Applications/SwiftBar.app" "$HOME/Applications/SwiftBar.app"; do
+        if [[ -d "$candidate" ]]; then
+            SWIFTBAR_APP="$candidate"
+            break
+        fi
+    done
+    if [[ -z "$SWIFTBAR_APP" ]]; then
+        SWIFTBAR_APP=$(mdfind "kMDItemCFBundleIdentifier == 'com.ameba.SwiftBar'" 2>/dev/null | head -1)
+    fi
+
     if [[ -n "$SWIFTBAR_APP" ]]; then
         osascript << APPLESCRIPT 2>/dev/null && \
             success "SwiftBar added to Login Items — launches automatically at boot" || \
             info "Could not add SwiftBar to Login Items — add manually in System Settings → General → Login Items"
 tell application "System Events"
-    set loginItems to the name of every login item
-    if "SwiftBar" is not in loginItems then
-        make login item at end with properties {path:"${SWIFTBAR_APP}", hidden:false}
+    if not (exists login item "SwiftBar") then
+        make new login item at end of login items with properties ¬
+            {name:"SwiftBar", path:"${SWIFTBAR_APP}", hidden:false}
     end if
 end tell
 APPLESCRIPT
