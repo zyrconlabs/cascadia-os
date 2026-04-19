@@ -358,8 +358,8 @@ PYTHON_BIN="$VENV_DIR/bin/python"
 mkdir -p "$INSTALL_DIR/data/logs"
 nohup "$PYTHON_BIN" -m cascadia.kernel.watchdog     --config "$INSTALL_DIR/config.json"     > "$INSTALL_DIR/data/logs/flint.log" 2>&1 &
 
-# Wait for FLINT to respond — up to 30 seconds
-info "Waiting for Cascadia to start..."
+# ── Wait for FLINT kernel to respond (up to 30s) ─────────────────────────────
+info "Waiting for Cascadia kernel to start..."
 STARTED=false
 for i in $(seq 1 30); do
     if curl -sf http://127.0.0.1:4011/health > /dev/null 2>&1; then
@@ -367,59 +367,129 @@ for i in $(seq 1 30); do
         break
     fi
     sleep 1
-    [[ $((i % 5)) -eq 0 ]] && echo -n "."
+    printf "  ${CYAN}[cascadia]${NC} Waiting... ${i}s"
 done
 echo ""
 
 if [[ "$STARTED" == "true" ]]; then
-    # Get component count
-    COMP_STATUS=$(curl -s http://127.0.0.1:4011/api/flint/status 2>/dev/null)
-    HEALTHY=$(echo "$COMP_STATUS" | python3 -c "
-import json,sys
-try:
-    d=json.load(sys.stdin)
-    comps=d.get('components',[])
-    healthy=sum(1 for c in comps if c.get('status')=='ready')
-    print(f'{healthy}/{len(comps)}')
-except: print('?/?')
-" 2>/dev/null || echo "?/?")
+    # ── Wait for all components to become ready (up to 20 more seconds) ───────
+    info "Checking all components..."
+    echo ""
+    sleep 3  # give tier 2 & 3 time to boot after tier 1
+
+    # Component definitions: name|port|tier_label
+    COMPONENTS=(
+        "flint|4011|Kernel"
+        "crew|5100|Foundation"
+        "vault|5101|Foundation"
+        "sentinel|5102|Foundation"
+        "curtain|5103|Foundation"
+        "beacon|6200|Runtime"
+        "stitch|6201|Runtime"
+        "vanguard|6202|Runtime"
+        "handshake|6203|Runtime"
+        "bell|6204|Runtime"
+        "almanac|6205|Runtime"
+        "prism|6300|Dashboard"
+    )
+
+    ALL_HEALTHY=true
+    HEALTHY_COUNT=0
+    TOTAL_COUNT=${#COMPONENTS[@]}
+    CURRENT_TIER=""
+
+    for COMP_DEF in "${COMPONENTS[@]}"; do
+        NAME="${COMP_DEF%%|*}"
+        REST="${COMP_DEF#*|}"
+        PORT="${REST%%|*}"
+        TIER="${REST##*|}"
+
+        # Print tier header when it changes
+        if [[ "$TIER" != "$CURRENT_TIER" ]]; then
+            CURRENT_TIER="$TIER"
+            echo "  ${TIER}"
+        fi
+
+        # Check health with 5s timeout
+        COMP_OK=false
+        for attempt in 1 2 3 4 5; do
+            if curl -sf "http://127.0.0.1:${PORT}/health" > /dev/null 2>&1; then
+                COMP_OK=true
+                break
+            fi
+            sleep 1
+        done
+
+        if [[ "$COMP_OK" == "true" ]]; then
+            printf "  ${GREEN}✓${NC} %-14s :%-5s ready\n" "$NAME" "$PORT"
+            HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
+        else
+            printf "  ${RED}✗${NC} %-14s :%-5s not responding\n" "$NAME" "$PORT"
+            ALL_HEALTHY=false
+        fi
+    done
 
     echo ""
-    success "════════════════════════════════════════════"
-    success " Cascadia OS v0.43 is running"
-    success "════════════════════════════════════════════"
+
+    # ── Final status report ───────────────────────────────────────────────────
+    if [[ "$ALL_HEALTHY" == "true" ]]; then
+        success "════════════════════════════════════════════"
+        success " Cascadia OS v0.43 — all systems go"
+        success " ${HEALTHY_COUNT}/${TOTAL_COUNT} components healthy"
+        success "════════════════════════════════════════════"
+    else
+        warn "════════════════════════════════════════════"
+        warn " ${HEALTHY_COUNT}/${TOTAL_COUNT} components healthy"
+        warn " Some components did not start — check logs:"
+        warn " tail -50 $INSTALL_DIR/data/logs/flint.log"
+        warn "════════════════════════════════════════════"
+    fi
+
     echo ""
-    echo "  Status:    ⬡ ${HEALTHY} components healthy"
     echo "  Dashboard: http://localhost:6300"
     echo "  Config:    $INSTALL_DIR/config.json"
     echo "  Logs:      $INSTALL_DIR/data/logs/"
     echo ""
-    echo "  Opening PRISM dashboard..."
+
+    # Open PRISM dashboard
+    info "Opening PRISM dashboard in your browser..."
     sleep 1
     [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300" 2>/dev/null || true
+
+    # Refresh SwiftBar
+    [[ "$(uname)" == "Darwin" ]] && open -g "swiftbar://refreshAllPlugins" 2>/dev/null || true
+
     echo ""
     echo "  ╔══════════════════════════════════════════════╗"
-    echo "  ║  Next steps:                                 ║"
+    echo "  ║  You are up and running.                     ║"
+    echo "  ║                                              ║"
     echo "  ║  1. PRISM dashboard opened in your browser   ║"
-    echo "  ║  2. SwiftBar icon shows system status        ║"
-    echo "  ║  3. Run the demo: bash demo.sh               ║"
-    echo "  ║  4. Cascadia starts automatically at boot    ║"
+    echo "  ║  2. SwiftBar menu bar shows system status    ║"
+    echo "  ║  3. Run the demo:  bash demo.sh              ║"
+    echo "  ║  4. Auto-starts at every boot                ║"
     echo "  ╚══════════════════════════════════════════════╝"
     echo ""
 
-    # Refresh SwiftBar so menu bar icon appears immediately
-    [[ "$(uname)" == "Darwin" ]] && open -g "swiftbar://refreshAllPlugins" 2>/dev/null || true
-
 else
+    # ── Kernel never responded ────────────────────────────────────────────────
     echo ""
-    warn "Cascadia did not respond within 30 seconds."
-    warn "Check logs: tail -50 $INSTALL_DIR/data/logs/flint.log"
+    echo "  ${RED}Kernel${NC}"
+    printf "  ${RED}✗${NC} %-14s :%-5s not responding\n" "flint" "4011"
     echo ""
-    echo "  To start manually:"
-    echo "    cd $INSTALL_DIR"
-    echo "    python3 -m cascadia.kernel.watchdog --config config.json &"
+    warn "Cascadia did not start within 30 seconds."
     echo ""
-    success "Installation complete — start manually with the command above."
+    echo "  Common causes:"
+    echo "  • Port 4011 already in use:  lsof -i :4011"
+    echo "  • Python package missing:    pip3 install -e . --break-system-packages"
+    echo "  • Config error:              cat $INSTALL_DIR/config.json"
+    echo ""
+    echo "  Check full log:"
+    echo "    tail -50 $INSTALL_DIR/data/logs/flint.log"
+    echo ""
+    echo "  Start manually:"
+    echo "    cd $INSTALL_DIR && python3 -m cascadia.kernel.watchdog --config config.json &"
+    echo ""
+    warn "Installation complete but Cascadia needs a manual start."
 fi
 
 # ── PATH setup ────────────────────────────────────────────────────────────────
