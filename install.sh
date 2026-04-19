@@ -56,7 +56,17 @@ if [[ "$(uname)" == "Darwin" ]]; then
     if [[ ! -d "$HOME/Library/Application Support/SwiftBar/Plugins" ]]; then
         info "Launching SwiftBar to initialise plugin folder..."
         open -a SwiftBar
-        sleep 3
+        # Wait up to 15s for SwiftBar to create the Plugins directory
+        SWIFTBAR_WAIT=0
+        while [[ ! -d "$HOME/Library/Application Support/SwiftBar/Plugins" ]] && [[ $SWIFTBAR_WAIT -lt 15 ]]; do
+            sleep 1
+            SWIFTBAR_WAIT=$((SWIFTBAR_WAIT + 1))
+        done
+        if [[ -d "$HOME/Library/Application Support/SwiftBar/Plugins" ]]; then
+            success "SwiftBar plugin folder ready"
+        else
+            warn "SwiftBar plugin folder not created yet — plugin will be linked if SwiftBar is opened manually"
+        fi
     fi
 fi
 
@@ -193,7 +203,7 @@ fi
 if [[ "$(uname)" == "Darwin" ]]; then
     PLIST_DIR="$HOME/Library/LaunchAgents"
     PLIST_PATH="$PLIST_DIR/com.zyrconlabs.cascadia.plist"
-    PYTHON_BIN="$(which python3)"
+    PYTHON_BIN="$VENV_DIR/bin/python"
     mkdir -p "$PLIST_DIR"
 
     cat > "$PLIST_PATH" << PLIST
@@ -261,7 +271,7 @@ APPLESCRIPT
     fi
 fi
 
-# ── 10. Done ──────────────────────────────────────────────────────────────────
+# ── 13. Done ──────────────────────────────────────────────────────────────────
 echo ""
 success "════════════════════════════════════════"
 success " Cascadia OS v0.43 installed successfully"
@@ -269,7 +279,7 @@ success "═══════════════════════�
 echo ""
 echo "  Start:   cascadia"
 echo "  Config:  $INSTALL_DIR/config.json"
-echo "  Logs:    $INSTALL_DIR/logs/"
+echo "  Logs:    $INSTALL_DIR/data/logs/"
 echo ""
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     for profile in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile"; do

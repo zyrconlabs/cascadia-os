@@ -26,7 +26,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-VERSION = "0.32"
+from cascadia import VERSION, VERSION_SHORT
+
 SETUP_PORT = 4010
 REQUIRED_PYTHON = (3, 11)
 
@@ -71,6 +72,15 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         {'name': 'bell',      'module': 'cascadia.chat.bell',                'port': 6204, 'tier': 2, 'heartbeat_file': './data/runtime/bell.heartbeat'},
         {'name': 'almanac',   'module': 'cascadia.guide.almanac',            'port': 6205, 'tier': 2, 'heartbeat_file': './data/runtime/almanac.heartbeat'},
         {'name': 'prism',     'module': 'cascadia.dashboard.prism',          'port': 6300, 'tier': 3, 'heartbeat_file': './data/runtime/prism.heartbeat', 'depends_on': ['crew', 'sentinel', 'beacon']},
+    ],
+    # Safety: fail-closed by default. Set true only for dev/demo environments.
+    'sentinel_fail_open': False,
+    # Available AI models — PRISM reads this to populate the model selector.
+    'models': [
+        {'id': 'qwen2.5-3b',    'name': 'Qwen 2.5 3B',    'file': 'qwen2.5-3b-instruct-q4_k_m.gguf',    'desc': '3B · Fast · Local',     'size': '3B',  'context': 4096, 'recommended_for': 'quick tasks, lead classification, drafts'},
+        {'id': 'qwen2.5-7b',    'name': 'Qwen 2.5 7B',    'file': 'qwen2.5-7b-instruct-q4_k_m.gguf',    'desc': '7B · Balanced · Local', 'size': '7B',  'context': 8192, 'recommended_for': 'proposals, analysis, general workflows'},
+        {'id': 'qwen2.5-14b',   'name': 'Qwen 2.5 14B',   'file': 'Qwen2.5-14B-Instruct-Q4_K_M.gguf',   'desc': '14B · Powerful · Local','size': '14B', 'context': 8192, 'recommended_for': 'complex reasoning, large documents'},
+        {'id': 'qwen2.5-vl-7b', 'name': 'Qwen 2.5 VL 7B', 'file': 'qwen2.5-vl-7b-instruct-q4_k_m.gguf', 'desc': '7B · Vision · Local',   'size': '7B',  'context': 8192, 'recommended_for': 'image analysis, document OCR'},
     ],
 }
 
@@ -359,7 +369,7 @@ class OnceInstaller:
         if self.config_path.exists():
             try:
                 existing = json.loads(self.config_path.read_text())
-                if existing.get('llm', {}).get('provider') is not None:
+                if existing.get('llm', {}).get('configured') is True:
                     self._log('AI already configured — skipping setup wizard')
                     return
             except Exception:
@@ -381,6 +391,10 @@ class OnceInstaller:
     def _apply_llm_config(self, llm: Dict[str, Any]) -> None:
         try:
             config = json.loads(self.config_path.read_text())
+            # Ensure models array is always present
+            if 'models' not in config:
+                config['models'] = DEFAULT_CONFIG['models']
+            llm['configured'] = True
             config['llm'] = llm
             self.config_path.write_text(json.dumps(config, indent=2))
             provider = llm.get('provider') or 'none'

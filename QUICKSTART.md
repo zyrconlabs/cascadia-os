@@ -32,6 +32,19 @@ Should return: `{"component": "flint", "state": "ready", "ok": true}`
 
 Or check the SwiftBar menu bar icon — it should show `⬡ COS 13/13` in green.
 
+**If port 4011 is not responding:**
+```bash
+# Check if the process is running
+pgrep -f "cascadia.kernel" && echo "running" || echo "not running"
+
+# Start it manually
+cd ~/cascadia-os && source .venv/bin/activate
+python -m cascadia.kernel.watchdog --config config.json &
+
+# Check logs
+tail -50 ~/cascadia-os/data/logs/flint.log
+```
+
 ---
 
 ## 3. Open PRISM dashboard

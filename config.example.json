@@ -2,11 +2,11 @@
   "log_dir": "./data/logs",
   "database_path": "./data/runtime/cascadia.db",
   "llm": {
-    "provider": "llamacpp",
-    "model": "qwen2.5-3b-instruct-q4_k_m.gguf",
+    "provider": null,
+    "model": null,
     "base_url": "http://127.0.0.1:8080",
     "configured": false,
-    "note": "Set configured:true after starting llama.cpp or Ollama. For Ollama: change base_url to http://127.0.0.1:11434",
+    "note": "Run install.sh or `python -m cascadia.installer.once` to configure. For llama.cpp set base_url to http://127.0.0.1:8080. For Ollama set base_url to http://127.0.0.1:11434",
     "active_model_id": "qwen2.5-3b"
   },
   "flint": {
