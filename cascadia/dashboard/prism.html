@@ -1227,10 +1227,6 @@ function renderSidebar() {
   const operators=q?S.operators.filter(c=>c.name.toLowerCase().includes(q)||c.role.toLowerCase().includes(q)):S.operators;
   const workers=operators.filter(c=>!c.isBeacon);
   let html='';
-  if (beacon) {
-    // Beacon not shown in sidebar
-    html+=`<div class="op-item op-item--beacon${a}" onclick="selectOperator('beacon')"><div class="op-avatar op-avatar--beacon">⬡<div class="op-dot ${d}"></div></div><div class="op-body"><div class="op-name">Beacon</div><div class="op-role">System Orchestrator</div><div class="op-meta"><span class="tag tag--neutral">System</span></div></div></div>`;
-  }
   if (workers.length) html+=`<div class="sidebar__section">Operators</div>`;
   workers.forEach(c=>{
     const a=S.selected===c.id?' op-item--active':'', d=SD[c.status]||'dot--offline', tg=ST[c.status]||'tag--offline', lb=SL[c.status]||'Offline';
