@@ -11,6 +11,7 @@ from pathlib import Path
 from cascadia import VERSION
 from cascadia.shared.config import load_config
 from cascadia.shared.logger import configure_logging
+from cascadia.kernel.operator_manager import OperatorManager
 
 class Watchdog:
     """Owns FLINT liveness monitoring. Does not own component-level supervision."""
@@ -19,6 +20,7 @@ class Watchdog:
         self.config = load_config(config_path)
         self.logger = configure_logging(self.config['log_dir'], 'watchdog')
         self.proc = None
+        self.operator_manager = OperatorManager(self.logger)
 
     def start_flint(self) -> None:
         self.logger.info('Watchdog starting FLINT')
@@ -46,6 +48,7 @@ class Watchdog:
         print('  \033[31m╚══════════════════════════════════════╝\033[0m')
         print('')
         self.start_flint()
+        self.operator_manager.run()
         # Startup grace: give FLINT time to boot before first stale check
         startup_grace = self.config['flint'].get('heartbeat_stale_after_seconds', 15) * 3
         self.logger.info('Watchdog giving FLINT %ss startup grace', startup_grace)

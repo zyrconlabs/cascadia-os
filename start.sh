@@ -60,30 +60,6 @@ if [[ "$CASCADIA_RUNNING" == "false" ]]; then
     curl -sf http://127.0.0.1:4011/health > /dev/null && echo "✓ Cascadia OS ready (11/11)" || echo "✗ Cascadia OS failed"
 fi
 
-# ── 3. Operators ──────────────────────────────────────────────────────────
-# RECON
-if curl -sf http://127.0.0.1:8002/api/health > /dev/null 2>&1; then
-    echo "✓ RECON already running"
-else
-    echo "▸ Starting RECON..."
-    mkdir -p data/vault/operators/recon/tasks/current
-    if [[ ! -f data/vault/operators/recon/tasks/current/task.md ]]; then
-        cp cascadia/operators/recon/tasks/current/task.md data/vault/operators/recon/tasks/current/ 2>/dev/null || true
-    fi
-    "$PYTHON" cascadia/operators/recon/dashboard.py >> data/logs/recon.log 2>&1 &
-    sleep 2
-    curl -sf http://127.0.0.1:8002/api/health > /dev/null && echo "✓ RECON ready" || echo "✗ RECON failed"
-fi
-
-# SCOUT
-if curl -sf http://127.0.0.1:7002/api/health > /dev/null 2>&1; then
-    echo "✓ SCOUT already running"
-else
-    echo "▸ Starting SCOUT..."
-    "$PYTHON" cascadia/operators/scout/scout_server.py >> data/logs/scout.log 2>&1 &
-    sleep 2
-    curl -sf http://127.0.0.1:7002/api/health > /dev/null && echo "✓ SCOUT ready" || echo "✗ SCOUT failed"
-fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
