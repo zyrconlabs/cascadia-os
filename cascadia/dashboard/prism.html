@@ -609,7 +609,7 @@ const POLL = 5000;
 const GatewayContract = {
   // ── System ──
   async getStatus() { return gw('GET', '/api/status'); },
-  async getOperators() { return gw('GET', '/api/operators'); },
+  async getOperators() { return gw('GET', '/api/prism/operators'); },
 
   // ── Chat ──
   async streamChat(messages, model, onToken, onDone) {

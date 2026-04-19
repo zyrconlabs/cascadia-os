@@ -256,6 +256,40 @@ def health():
     return jsonify({"status": "online", "service": "recon", "version": "1.0.0", "port": 8002})
 
 
+
+
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    """Standard operator chat contract — lets Beacon and PRISM talk to RECON."""
+    data = request.get_json(silent=True) or {}
+    msg  = (data.get("message") or "").strip().lower()
+
+    if any(w in msg for w in ["status", "how are you", "what are you doing"]):
+        state = load_state()
+        reply = f"RECON is {state.get('status', 'idle')}. Cycle {state.get('cycle', 0)}, {state.get('total_rows', 0)} rows collected."
+
+    elif any(w in msg for w in ["stop", "pause", "halt"]):
+        write_task_stop()
+        reply = "RECON stop signal sent."
+
+    elif any(w in msg for w in ["results", "leads", "found", "rows"]):
+        rows = get_recent_rows(5)
+        reply = f"Last {len(rows)} leads: " + "; ".join(str(r) for r in rows) if rows else "No results yet."
+
+    elif any(w in msg for w in ["log", "latest", "last"]):
+        lines = tail_log(10)
+        reply = "Last log entries:\n" + "\n".join(lines) if lines else "No log entries yet."
+
+    else:
+        state = load_state()
+        reply = (
+            f"RECON here — {state.get('status', 'idle')}, {state.get('total_rows', 0)} rows collected. "
+            "Ask me: status, results, log, or stop."
+        )
+
+    return jsonify({"reply": reply, "operator": "recon", "status": "online"})
+
+
 if __name__ == "__main__":
     print("Recon Worker Dashboard → http://localhost:8002")
     app.run(host="0.0.0.0", port=8002, debug=False, threaded=True)
