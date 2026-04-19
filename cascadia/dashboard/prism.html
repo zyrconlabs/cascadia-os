@@ -513,112 +513,7 @@ input[type="file"]{display:none}
   font-size:11px;font-weight:500;cursor:pointer;background:var(--white);
   color:var(--text-dim);transition:all .15s;font-family:var(--font)}
 .ptab.on{background:var(--prism-a);color:#fff;border-color:var(--prism-a)}
-/* ── HEALTH SURFACE ── */
-async function renderHealthSurface() {
-  const panel = document.getElementById('main-panel');
-  panel.innerHTML = '<div class="health-summary"><span class="hs-count" id="hs-count">—</span><div class="hs-label" id="hs-label">Checking components...</div></div><div class="health-grid" id="hgrid"><div style="padding:20px;color:var(--text-dim);font-size:12px">Loading health check...</div></div>' + _healthButtons();
-  await refreshHealth();
-}
-
-async function refreshHealth() {
-  try {
-    const d = await prismFetch('/api/prism/health-check');
-    if (!d) {
-      // Backend offline — show clear offline state
-      const grid = document.getElementById('hgrid');
-      const countEl = document.getElementById('hs-count');
-      const labelEl = document.getElementById('hs-label');
-      if (countEl) countEl.textContent = '—';
-      if (labelEl) labelEl.textContent = 'PRISM not reachable';
-      if (grid) grid.innerHTML = `
-        <div class="hc-group">Connection</div>
-        <div class="hc">
-          <div class="hc-ico hc-err"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-          <div><div class="hc-lbl">PRISM Gateway</div>
-          <div class="hc-det">Cannot reach http://127.0.0.1:6300 — run: python3 -m cascadia.kernel.watchdog --config config.json</div></div>
-          <span class="hc-badge hcb-err">Offline</span>
-        </div>
-        <div class="hc-group">Services</div>
-        ${['SIGNAL','SENTINEL','VAULT','VANGUARD','PRISM'].map(svc => `
-        <div class="hc">
-          <div class="hc-ico hc-spin"></div>
-          <div><div class="hc-lbl">${svc}</div><div class="hc-det">Status unknown — backend offline</div></div>
-          <span class="hc-badge hcb-spin">Unknown</span>
-        </div>`).join('')}`;
-      return;
-    }
-    const grid = document.getElementById('hgrid');
-    const countEl = document.getElementById('hs-count');
-    const labelEl = document.getElementById('hs-label');
-    if (!grid) return;
-
-    const okCount = Object.values(d.checks).filter(c=>c.status==='ok').length;
-    const total = Object.values(d.checks).length;
-    if (countEl) countEl.textContent = okCount+'/'+total;
-    if (labelEl) labelEl.textContent = d.summary.ready ? 'All systems healthy' : okCount+'/'+total+' components ready';
-
-    const groups = {};
-    Object.values(d.checks).forEach(c => {
-      if (!groups[c.group]) groups[c.group] = [];
-      groups[c.group].push(c);
-    });
-
-    const icoOk = `<div class="hc-ico hc-ok"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
-    const icoWarn = `<div class="hc-ico hc-warn"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/></svg></div>`;
-    const icoErr = `<div class="hc-ico hc-err"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>`;
-    const icoSpin = `<div class="hc-ico hc-spin"></div>`;
-
-    grid.innerHTML = Object.entries(groups).map(([grp, checks]) => `
-      <div class="hc-group">${grp}</div>
-      ${checks.map(c => {
-        const ico = c.status==='ok'?icoOk:c.status==='warning'?icoWarn:c.status==='error'?icoErr:icoSpin;
-        const badge = `<span class="hc-badge hcb-${c.status==='ok'?'ok':c.status==='warning'?'warn':c.status==='error'?'err':'spin'}">${c.status==='ok'?'Ready':c.status==='warning'?'Warning':c.status==='error'?'Error':'Checking'}</span>`;
-        return `<div class="hc">${ico}<div><div class="hc-lbl">${c.label}</div><div class="hc-det">${c.detail||''}</div></div>${badge}</div>`;
-      }).join('')}
-    `).join('');
-  } catch(e) {}
-}
-
-/* ── ALMANAC CHAT ── */
-function toggleAlmanac() {
-  const ov = document.getElementById('alm-overlay');
-  ov.classList.toggle('open');
-  if (ov.classList.contains('open')) {
-    document.getElementById('alm-input').focus();
-  }
-}
-
-async function sendAlmanac() {
-  const input = document.getElementById('alm-input');
-  const msgs = document.getElementById('alm-msgs');
-  const q = input.value.trim();
-  if (!q) return;
-  input.value = '';
-
-  // Add user message
-  msgs.innerHTML += `<div class="alm-msg-user">${q}</div>`;
-  // Add typing indicator
-  const typingId = 'alm-typing-' + Date.now();
-  msgs.innerHTML += `<div class="alm-typing" id="${typingId}"><span></span><span></span><span></span></div>`;
-  msgs.scrollTop = msgs.scrollHeight;
-
-  try {
-    // Call Almanac at port 6205 via PRISM proxy, or direct
-    const res = await fetch('http://127.0.0.1:6205/query', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({query: q, context: 'prism_ui'})
-    });
-    const data = await res.json();
-    const answer = data.answer || data.response || data.result || 'I am not sure about that. Check the MANUAL.md or run: bash demo.sh';
-    document.getElementById(typingId)?.remove();
-    msgs.innerHTML += `<div class="alm-msg-ai">${answer}</div>`;
-  } catch(e) {
-    document.getElementById(typingId)?.remove();
-    msgs.innerHTML += `<div class="alm-msg-ai">Almanac is not responding right now. Make sure Cascadia is running: <strong>bash start.sh</strong></div>`;
-  }
-  msgs.scrollTop = msgs.scrollHeight;
-}
+/* ── HEALTH SURFACE — functions moved to script block below ── */
 </style>
 </head>
 <body>
@@ -672,7 +567,7 @@ async function sendAlmanac() {
    Swap kernels by replacing this object's impls.
    ════════════════════════════════════════════ */
 const GW = 'http://localhost:7001'; // Legacy gateway (not used in Cascadia mode)
-const PRISM_URL = 'http://127.0.0.1:6300'; // Cascadia OS live endpoint
+const PRISM_URL = window.location.origin; // Always same origin as serving host — no CORS issues
 
 async function prismFetch(path) {
   try {
@@ -2036,6 +1931,111 @@ function toggleRunDetail(id) { S.selectedRun=S.selectedRun===id?null:id; renderR
 function replayRun(id) { const r=Object.values(S.runs).flat().find(x=>x.id===id); if(r)selectCell(r.workerId); }
 function exportRuns() { const data=JSON.stringify(getFilteredRuns(),null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download='prism_runs.json';a.click();URL.revokeObjectURL(url); }
 function showAddWorker() { alert('Add worker:\n\nRegister a new worker by providing a WorkerManifest:\n• id (unique)\n• name / role\n• apiBaseUrl (e.g. http://localhost:8004)\n• supportsThoughts / supportsPanel\n• metricsSchema\n\nWorker SDK and manifest editor: Studio surface → Phase 2'); }
+/* ═══ HEALTH SURFACE ═══ */
+async function renderHealthSurface() {
+  const panel = document.getElementById('main-panel');
+  panel.innerHTML = '<div class="health-summary"><span class="hs-count" id="hs-count">—</span><div class="hs-label" id="hs-label">Checking components...</div></div><div class="health-grid" id="hgrid"><div style="padding:20px;color:var(--text-dim);font-size:12px">Loading health check...</div></div>' + _healthButtons();
+  await refreshHealth();
+}
+
+async function refreshHealth() {
+  try {
+    const d = await prismFetch('/api/prism/health-check');
+    if (!d) {
+      const grid = document.getElementById('hgrid');
+      const countEl = document.getElementById('hs-count');
+      const labelEl = document.getElementById('hs-label');
+      if (countEl) countEl.textContent = '—';
+      if (labelEl) labelEl.textContent = 'PRISM not reachable';
+      if (grid) grid.innerHTML = `
+        <div class="hc-group">Connection</div>
+        <div class="hc">
+          <div class="hc-ico hc-err"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          <div><div class="hc-lbl">PRISM Gateway</div>
+          <div class="hc-det">Cannot reach backend — run: python3 -m cascadia.kernel.watchdog --config config.json</div></div>
+          <span class="hc-badge hcb-err">Offline</span>
+        </div>`;
+      return;
+    }
+    const grid = document.getElementById('hgrid');
+    const countEl = document.getElementById('hs-count');
+    const labelEl = document.getElementById('hs-label');
+    if (!grid) return;
+
+    const okCount = Object.values(d.checks).filter(c=>c.status==='ok').length;
+    const total = Object.values(d.checks).length;
+    if (countEl) countEl.textContent = okCount+'/'+total;
+    if (labelEl) labelEl.textContent = d.summary?.ready ? 'All systems operational' : okCount+'/'+total+' components ready';
+
+    const groups = {};
+    Object.values(d.checks).forEach(c => {
+      if (!groups[c.group]) groups[c.group] = [];
+      groups[c.group].push(c);
+    });
+
+    const icoOk   = `<div class="hc-ico hc-ok"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+    const icoWarn  = `<div class="hc-ico hc-warn"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/></svg></div>`;
+    const icoErr   = `<div class="hc-ico hc-err"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>`;
+    const icoSpin  = `<div class="hc-ico hc-spin"></div>`;
+
+    grid.innerHTML = Object.entries(groups).map(([grp, checks]) => `
+      <div class="hc-group">${grp}</div>
+      ${checks.map(c => {
+        const ico   = c.status==='ok'?icoOk:c.status==='warning'?icoWarn:c.status==='error'?icoErr:icoSpin;
+        const cls   = c.status==='ok'?'ok':c.status==='warning'?'warn':c.status==='error'?'err':'spin';
+        const lbl   = c.status==='ok'?'Ready':c.status==='warning'?'Warning':c.status==='error'?'Error':'Checking';
+        return `<div class="hc">${ico}<div><div class="hc-lbl">${c.label}</div><div class="hc-det">${c.detail||''}</div></div><span class="hc-badge hcb-${cls}">${lbl}</span></div>`;
+      }).join('')}
+    `).join('');
+  } catch(e) { console.error('refreshHealth error:', e); }
+}
+
+/* ═══ ALMANAC CHAT ═══ */
+function toggleAlmanac() {
+  const ov = document.getElementById('alm-overlay');
+  if (!ov) return;
+  ov.classList.toggle('open');
+  if (ov.classList.contains('open')) document.getElementById('alm-input')?.focus();
+}
+
+async function sendAlmanac() {
+  const input = document.getElementById('alm-input');
+  const msgs  = document.getElementById('alm-msgs');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  msgs.innerHTML += `<div class="alm-msg-user">${q}</div>`;
+  const typingId = 'alm-typing-' + Date.now();
+  msgs.innerHTML += `<div class="alm-typing" id="${typingId}"><span></span><span></span><span></span></div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  try {
+    const res = await fetch(window.location.origin + '/api/prism/almanac-query', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: q, context: 'prism_ui'})
+    });
+    if (!res.ok) throw new Error('no proxy');
+    const data = await res.json();
+    document.getElementById(typingId)?.remove();
+    msgs.innerHTML += `<div class="alm-msg-ai">${data.answer||data.response||data.result||'No answer returned.'}</div>`;
+  } catch(e) {
+    // fallback: try almanac direct
+    try {
+      const res2 = await fetch('http://127.0.0.1:6205/query', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({query:q, context:'prism_ui'})
+      });
+      const data2 = await res2.json();
+      document.getElementById(typingId)?.remove();
+      msgs.innerHTML += `<div class="alm-msg-ai">${data2.answer||data2.response||data2.result||'I am not sure about that.'}</div>`;
+    } catch(_) {
+      document.getElementById(typingId)?.remove();
+      msgs.innerHTML += `<div class="alm-msg-ai">Almanac is not responding. Make sure Cascadia is running: <strong>bash start.sh</strong></div>`;
+    }
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
 function showHelp() {} // replaced by Almanac
 
 /* ═══ TERMINAL SURFACE ═══ */
