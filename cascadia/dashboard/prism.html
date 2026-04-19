@@ -61,25 +61,25 @@ button{cursor:pointer;font-family:var(--font)}input,textarea,select{font-family:
 .sidebar__add{width:100%;height:32px;border:1px dashed var(--gray-300);border-radius:8px;background:transparent;font-size:12px;color:var(--gray-500);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
 .sidebar__add:hover{border-color:var(--prism-a);color:var(--prism-a);background:rgba(79,172,254,.04)}
 
-/* ── CELL ITEMS ── */
-.cell-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--gray-100)}
-.cell-item:hover{background:var(--gray-100)}
-.cell-item--active{background:var(--white);box-shadow:inset 3px 0 0 var(--prism-a)}
-.cell-item--active:hover{background:var(--white)}
-.cell-item--beacon{border-bottom:2px solid var(--gray-200);padding:13px 16px}
-.cell-avatar{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;position:relative}
-.cell-avatar--beacon{background:linear-gradient(135deg,var(--prism-a),var(--prism-b));color:#fff;border-radius:50%}
-.cell-avatar--worker{background:#4a5568;color:#fff}
-.cell-avatar--cell{background:#4a5568;color:#fff}
-.cell-dot{position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--gray-50)}
-.cell-item--active .cell-dot{border-color:var(--white)}
+/* ── OPERATOR ITEMS ── */
+.op-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--gray-100)}
+.op-item:hover{background:var(--gray-100)}
+.op-item--active{background:var(--white);box-shadow:inset 3px 0 0 var(--prism-a)}
+.op-item--active:hover{background:var(--white)}
+.op-item--beacon{border-bottom:2px solid var(--gray-200);padding:13px 16px}
+.op-avatar{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;position:relative}
+.op-avatar--beacon{background:linear-gradient(135deg,var(--prism-a),var(--prism-b));color:#fff;border-radius:50%}
+.op-avatar--worker{background:#4a5568;color:#fff}
+.op-avatar--operator{background:#4a5568;color:#fff}
+.op-dot{position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--gray-50)}
+.op-item--active .op-dot{border-color:var(--white)}
 .dot--online{background:var(--green);box-shadow:0 0 5px var(--green-glow)}
 .dot--standby{background:var(--yellow)}
 .dot--offline{background:var(--red)}
-.cell-body{flex:1;min-width:0}
-.cell-name{font-size:13px;font-weight:600;color:var(--navy-800)}
-.cell-role{font-size:11px;color:var(--gray-500);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cell-meta{display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap}
+.op-body{flex:1;min-width:0}
+.op-name{font-size:13px;font-weight:600;color:var(--navy-800)}
+.op-role{font-size:11px;color:var(--gray-500);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-meta{display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap}
 .tag{font-family:var(--mono);font-size:9.5px;font-weight:500;padding:2px 6px;border-radius:4px}
 .tag--online{color:#1d7a3a;background:var(--green-soft)}.tag--standby{color:#8a6a0a;background:var(--yellow-soft)}.tag--offline{color:#a33029;background:var(--red-soft)}
 .tag--neutral{color:var(--navy-500);background:var(--navy-50)}.tag--worker{color:var(--navy-700);background:var(--navy-100)}
@@ -97,7 +97,7 @@ button{cursor:pointer;font-family:var(--font)}input,textarea,select{font-family:
 .topbar__avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;position:relative;flex-shrink:0}
 .topbar__avatar--beacon{background:linear-gradient(135deg,var(--prism-a),var(--prism-b));color:#fff;border-radius:50%}
 .topbar__avatar--worker{background:var(--navy-800);color:var(--white)}
-.topbar__avatar--cell{background:var(--navy-100);color:var(--navy-600)}
+.topbar__avatar--operator{background:var(--navy-100);color:var(--navy-600)}
 .topbar__dot{position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--white)}
 .topbar__name{font-size:15px;font-weight:700;color:var(--navy-800)}
 .topbar__role{font-size:11px;color:var(--gray-500)}
@@ -149,7 +149,7 @@ button{cursor:pointer;font-family:var(--font)}input,textarea,select{font-family:
 .chat-msg{display:flex;gap:8px;margin-bottom:10px;animation:msgIn .2s var(--ease)}
 .msg-av{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px}
 .msg-av--user{background:var(--navy-700);color:var(--white)}.msg-av--beacon{background:var(--navy-600);color:var(--white);border-radius:50%}
-.msg-av--cell{background:var(--navy-100);color:var(--navy-600)}.msg-av--worker{background:var(--navy-800);color:var(--white)}
+.msg-av--operator{background:var(--navy-100);color:var(--navy-600)}.msg-av--worker{background:var(--navy-800);color:var(--white)}
 .msg-body{flex:1;min-width:0}
 .msg-header{display:flex;align-items:baseline;gap:7px;margin-bottom:2px}
 .msg-name{font-size:12px;font-weight:600;color:var(--navy-800)}.msg-time{font-family:var(--mono);font-size:9.5px;color:var(--gray-400)}
@@ -567,8 +567,8 @@ input[type="file"]{display:none}
       <div style="flex:1;min-width:0"><div class="sidebar__title">PRISM · Dashboard</div><div class="sidebar__sub">Cascadia OS v0.43</div></div>
       <div id="conn-dot" style="width:7px;height:7px;border-radius:50%;background:var(--gray-300);flex-shrink:0" title="Gateway status"></div>
     </div>
-    <div class="sidebar__search"><input type="text" placeholder="Search operators…" oninput="filterCells(this.value)"></div>
-    <div class="sidebar__list" id="cell-list"></div>
+    <div class="sidebar__search"><input type="text" placeholder="Search operators…" oninput="filterOperators(this.value)"></div>
+    <div class="sidebar__list" id="op-list"></div>
     <div class="sidebar__footer">
       <button class="sidebar__add" onclick="showAddWorker()">
         <svg style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -733,12 +733,12 @@ const WORKER_MANIFESTS = {
 function getManifest(id) {
   return WORKER_MANIFESTS[id] || {supportsThoughts:false, supportsPanel:false, isWorker:false, supportsCommands:[], metricsSchema:[]};
 }
-// Consistent worker check driven by manifests, not demoDB flags
+// Consistent worker check driven by manifests
 function isWorker(id) { return !!WORKER_MANIFESTS[id]?.isWorker; }
 
 /* ═══ STATE ═══ */
 const S = {
-  surface:'ops', selected:null, cells:[], messages:{},
+  surface:'ops', selected:null, operators:[], messages:{},
   filter:'', model:'qwen2.5-3b-instruct-q4_k_m.gguf', cmdMenuOpen:{}, modelDDOpen:false,
   workerPanelOpen:{}, activity:{}, connected:false,
   approvals:[], runs:{}, selectedRun:null,
@@ -797,8 +797,8 @@ const Vault = (() => {
     });
   }
   return {
-    async saveMessages(cellId, msgs) { await tx('kv','readwrite', s => s.put({key:'msgs_'+cellId, value:msgs})); },
-    async loadMessages(cellId) { const r = await tx('kv','readonly', s => s.get('msgs_'+cellId)); return r?.value||null; },
+    async saveMessages(operatorId, msgs) { await tx('kv','readwrite', s => s.put({key:'msgs_'+operatorId, value:msgs})); },
+    async loadMessages(operatorId) { const r = await tx('kv','readonly', s => s.get('msgs_'+operatorId)); return r?.value||null; },
     async saveRun(run) {
       await tx('runs','readwrite', s => s.put(run));
       if (!S.runs[run.workerId]) S.runs[run.workerId]=[];
@@ -833,16 +833,16 @@ const Vault = (() => {
 
 /* ═══ INGESTION ═══ */
 const INGEST_STAGES = ['uploading','parsing','chunking','embedding','indexing','ready'];
-async function ingestFile(file, cellId) {
+async function ingestFile(file, operatorId) {
   const fileId = 'file_'+Date.now();
   const ext = file.name.split('.').pop().toLowerCase();
   const icon = {pdf:'📄',docx:'📝',csv:'📊',xlsx:'📊',txt:'📃',md:'📃',png:'🖼',jpg:'🖼'}[ext]||'📎';
   const msgId = 'ingest_'+fileId;
-  const fileInfo = {id:fileId, name:file.name, size:file.size, ext, workerId:cellId, uploadedAt:Date.now(), stage:'uploading', chunks:0};
+  const fileInfo = {id:fileId, name:file.name, size:file.size, ext, workerId:operatorId, uploadedAt:Date.now(), stage:'uploading', chunks:0};
   await Vault.saveFile(fileInfo);
 
-  if (!S.messages[cellId]) S.messages[cellId]=[];
-  S.messages[cellId].push({time:timeNow(), type:'agent', html:`
+  if (!S.messages[operatorId]) S.messages[operatorId]=[];
+  S.messages[operatorId].push({time:timeNow(), type:'agent', html:`
     <div class="ingest-progress" id="${msgId}">
       <div class="ingest-header"><span class="ingest-icon">${icon}</span><span class="ingest-name">${esc(file.name)}</span><span class="ingest-stage">UPLOADING</span></div>
       <div class="ingest-bar"><div class="ingest-bar__fill" style="width:5%"></div></div>
@@ -857,15 +857,15 @@ async function ingestFile(file, cellId) {
     if (el) {
       el.querySelector('.ingest-stage').textContent = stage.toUpperCase();
       el.querySelector('.ingest-bar__fill').style.width = stagePct[stage]+'%';
-      if (stage==='ready') el.querySelector('.ingest-stats').innerHTML = `<span>✓ ${Math.max(1,Math.floor(file.size/500))} chunks indexed</span><span>Scope: ${cellId}</span>`;
+      if (stage==='ready') el.querySelector('.ingest-stats').innerHTML = `<span>✓ ${Math.max(1,Math.floor(file.size/500))} chunks indexed</span><span>Scope: ${operatorId}</span>`;
     }
     fileInfo.stage = stage;
     if (stage==='indexing') fileInfo.chunks = Math.max(1,Math.floor(file.size/500));
     await Vault.saveFile(fileInfo);
   }
-  S.messages[cellId].push({time:timeNow(), type:'agent', text:`✓ ${file.name} ingested — ${fileInfo.chunks} chunks indexed and ready for RAG retrieval. Ask questions referencing this document.`});
-  await Vault.saveMessages(cellId, S.messages[cellId]);
-  await Vault.appendAuditEvent({id:'audit_'+Date.now(), ts:Date.now(), icon:'📁', action:`File ingested: ${file.name}`, actor:cellId, time:timeNow()});
+  S.messages[operatorId].push({time:timeNow(), type:'agent', text:`✓ ${file.name} ingested — ${fileInfo.chunks} chunks indexed and ready for RAG retrieval. Ask questions referencing this document.`});
+  await Vault.saveMessages(operatorId, S.messages[operatorId]);
+  await Vault.appendAuditEvent({id:'audit_'+Date.now(), ts:Date.now(), icon:'📁', action:`File ingested: ${file.name}`, actor:operatorId, time:timeNow()});
   renderMain(); scrollChat();
 }
 
@@ -917,7 +917,7 @@ function initApprovals() {
 
 /* ═══ THOUGHT STREAM ═══ */
 const _tpollers={}, _lastTIds={};
-function addThought(t, cellId) {
+function addThought(t, operatorId) {
   const log=document.getElementById('chat-log'); if(!log)return;
   const icons={search:'🔍',think:'⚙',write:'💾',cycle:'↻',info:'·',stop:'⬛'};
   const div=document.createElement('div');
@@ -970,7 +970,7 @@ async function loadWorkerPanel(id) {
     ${progHTML}
     ${logLines?`<div class="wp-log">${logLines}</div>`:''}`;
 }
-function gwUrl(id) { const c=S.cells.find(x=>x.id===id); return c?.port?`http://localhost:${c.port}`:GW; }
+function gwUrl(id) { const c=S.operators.find(x=>x.id===id); return c?.port?`http://localhost:${c.port}`:GW; }
 
 /* ═══ ACTIVITY ═══ */
 function showAct(id, label, badges) { S.activity[id]={label,badges:badges||[]}; renderMain(); }
@@ -986,7 +986,7 @@ const SD={active:'dot--online',standby:'dot--standby',offline:'dot--offline'};
 const ST={active:'tag--online',standby:'tag--standby',offline:'tag--offline'};
 
 async function handleCommand(id, cmd) {
-  const t=timeNow(), c=S.cells.find(x=>x.id===id);
+  const t=timeNow(), c=S.operators.find(x=>x.id===id);
   if (!S.messages[id]) S.messages[id]=[];
 
   // Workers
@@ -1091,7 +1091,7 @@ async function handleCommand(id, cmd) {
     const totalCost=allRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0);
     clearAct(id);
     let byWorker='';
-    for (const cc of S.cells.filter(x=>!x.isBeacon)) {
+    for (const cc of S.operators.filter(x=>!x.isBeacon)) {
       const wCost=(S.runs[cc.id]||[]).reduce((s,r)=>s+parseFloat(r.cost||0),0);
       byWorker+=`• ${cc.name}: $${wCost.toFixed(6)} (${(S.runs[cc.id]||[]).length} runs)\n`;
     }
@@ -1114,7 +1114,7 @@ function buildWorkerCard(data, id) {
 
 /* ═══ SEND MESSAGE ═══ */
 async function sendMsg(id, text) {
-  const t=timeNow(), c=S.cells.find(x=>x.id===id);
+  const t=timeNow(), c=S.operators.find(x=>x.id===id);
   if (!S.messages[id]) S.messages[id]=[];
   if (text.startsWith('/')) { S.messages[id].push({time:t,type:'user',text}); renderMain(); scrollChat(); await handleCommand(id,text); return; }
   S.messages[id].push({time:t,type:'user',text});
@@ -1128,10 +1128,10 @@ async function sendMsg(id, text) {
   );
 }
 
-/* ═══ CELL POLLING ═══ */
+/* ═══ OPERATOR POLLING ═══ */
 function mapStatus(s) { if(s==='online')return'active'; if(s==='offline'||s==='error')return'offline'; if(s==='standby')return'standby'; return s||'offline'; }
 
-async function refreshCells() {
+async function refreshOperators() {
   const data = await prismFetch('/api/prism/overview');
   const connDot = document.getElementById('conn-dot');
   if (data) {
@@ -1151,20 +1151,38 @@ async function refreshCells() {
       almanac:   {role:'Knowledge Base',     desc:'Component catalog & runbook'},
       prism:     {role:'Dashboard',          desc:'System visibility aggregator'},
     };
-    S.cells = Object.entries(compStates).map(([name, state]) => {
-      const m = COMP_META[name] || {role:'Component', desc:''};
-      return {
-        id: name, name: name.toUpperCase(), role: m.role,
-        status: state === 'ready' ? 'active' : state === 'starting' ? 'standby' : 'offline',
-        model: '—', routing: 'local', port: null,
-        completion: 0, hours: 0, done: 0, total: 0,
-        lastAction: '—', uptime: '—', files: [],
-        currentTask: state, isBeacon: name === 'beacon',
-        isWorker: false, hasPanel: false, uiPath: '/',
-      };
-    });
+    // Load operators from registry into sidebar (not kernel components)
+    try {
+      const opData = await prismFetch('/api/prism/operators');
+      if (opData && opData.operators && opData.operators.length) {
+        const CAT_ICONS = {
+          intelligence:'🔍', sales:'💼', executive:'⚡',
+          inbound:'📥', engineering:'🛠', operations:'⚙'
+        };
+        S.operators = opData.operators.map(op => ({
+          id: op.id,
+          name: op.name,
+          role: op.category ? op.category.charAt(0).toUpperCase()+op.category.slice(1) : 'Operator',
+          status: op.status === 'offline' ? 'offline' : op.op_status === 'production' ? 'active' : 'standby',
+          model: S.model || '—',
+          routing: 'local',
+          port: op.port,
+          completion: 0, hours: 0, done: 0, total: 0,
+          lastAction: op.op_status || '—',
+          uptime: op.status !== 'offline' ? 'online' : 'offline',
+          files: [],
+          currentTask: op.description ? op.description.slice(0,60)+'…' : '—',
+          isBeacon: false,
+          isWorker: WORKER_MANIFESTS[op.id]?.isWorker || false,
+          hasPanel: WORKER_MANIFESTS[op.id]?.supportsPanel || false,
+          uiPath: op.ui_url || '/',
+          category: op.category,
+          icon: CAT_ICONS[op.category] || '⬡',
+        }));
+      }
+    } catch(e) {}
     ensureBeacon();
-    const b = S.cells.find(c => c.id === 'beacon');
+    const b = S.operators.find(c => c.id === 'beacon');
     if (b) {
       b.currentTask = (data.system?.components_healthy || '?') + ' components healthy';
       b.status = data.system?.flint_state === 'ready' ? 'active' : 'offline';
@@ -1186,8 +1204,8 @@ async function refreshCells() {
   } else {
     S.connected = false;
     if (connDot) connDot.style.background = 'var(--red)';
-    if (!S.cells.length) { S.cells = demoDB(); ensureBeacon(); }
-    S.cells.forEach(c => { if (!c.isBeacon) c.status = 'offline'; });
+    if (!S.operators.length) { S.operators = demoDB(); ensureBeacon(); }
+    S.operators.forEach(c => { if (!c.isBeacon) c.status = 'offline'; });
   }
   renderSidebar();
   if (S.selected && S.surface === 'ops') renderMain();
@@ -1204,22 +1222,22 @@ function updateNavBadges() {
 
 /* ═══ SIDEBAR ═══ */
 function renderSidebar() {
-  const list=document.getElementById('cell-list'); if(!list)return;
+  const list=document.getElementById('op-list'); if(!list)return;
   const q=S.filter.toLowerCase();
-  const cells=q?S.cells.filter(c=>c.name.toLowerCase().includes(q)||c.role.toLowerCase().includes(q)):S.cells;
-  const beacon=cells.find(c=>c.isBeacon), workers=cells.filter(c=>!c.isBeacon);
+  const operators=q?S.operators.filter(c=>c.name.toLowerCase().includes(q)||c.role.toLowerCase().includes(q)):S.operators;
+  const workers=operators.filter(c=>!c.isBeacon);
   let html='';
   if (beacon) {
-    const a=S.selected==='beacon'?' cell-item--active':'', d=SD[beacon.status]||'dot--offline';
-    html+=`<div class="cell-item cell-item--beacon${a}" onclick="selectCell('beacon')"><div class="cell-avatar cell-avatar--beacon">⬡<div class="cell-dot ${d}"></div></div><div class="cell-body"><div class="cell-name">Beacon</div><div class="cell-role">System Orchestrator</div><div class="cell-meta"><span class="tag tag--neutral">System</span></div></div></div>`;
+    // Beacon not shown in sidebar
+    html+=`<div class="op-item op-item--beacon${a}" onclick="selectOperator('beacon')"><div class="op-avatar op-avatar--beacon">⬡<div class="op-dot ${d}"></div></div><div class="op-body"><div class="op-name">Beacon</div><div class="op-role">System Orchestrator</div><div class="op-meta"><span class="tag tag--neutral">System</span></div></div></div>`;
   }
   if (workers.length) html+=`<div class="sidebar__section">Operators</div>`;
   workers.forEach(c=>{
-    const a=S.selected===c.id?' cell-item--active':'', d=SD[c.status]||'dot--offline', tg=ST[c.status]||'tag--offline', lb=SL[c.status]||'Offline';
-    const avCls=c.isWorker?'cell-avatar--worker':'cell-avatar--cell';
+    const a=S.selected===c.id?' op-item--active':'', d=SD[c.status]||'dot--offline', tg=ST[c.status]||'tag--offline', lb=SL[c.status]||'Offline';
+    const avCls=c.isWorker?'op-avatar--worker':'op-avatar--operator';
     const pend=S.approvals.filter(ap=>ap.workerId===c.id&&ap.status==='pending').length;
     const runCount=(S.runs[c.id]||[]).length;
-    html+=`<div class="cell-item${a}" onclick="selectCell('${c.id}')"><div class="cell-avatar ${avCls}">${initials(c.name)}<div class="cell-dot ${d}"></div></div><div class="cell-body"><div class="cell-name">${esc(c.name)}</div><div class="cell-role">${esc(c.role)}</div><div class="cell-meta"><span class="tag ${tg}">${lb}</span><span class="tag ${c.isWorker?'tag--worker':'tag--neutral'}">${c.isWorker?'Worker':'Operator'}</span>${pend?`<span class="tag tag--approval">⚠${pend}</span>`:''}${runCount?`<span class="tag tag--neutral">${runCount} runs</span>`:''}</div></div></div>`;
+    html+=`<div class="op-item${a}" onclick="selectOperator('${c.id}')"><div class="op-avatar ${avCls}">${initials(c.name)}<div class="op-dot ${d}"></div></div><div class="op-body"><div class="op-name">${esc(c.name)}</div><div class="op-role">${esc(c.role)}</div><div class="op-meta"><span class="tag ${tg}">${lb}</span><span class="tag ${c.isWorker?'tag--worker':'tag--neutral'}">${c.isWorker?'Worker':'Operator'}</span>${pend?`<span class="tag tag--approval">⚠${pend}</span>`:''}${runCount?`<span class="tag tag--neutral">${runCount} runs</span>`:''}</div></div></div>`;
   });
   list.innerHTML=html;
 }
@@ -1229,9 +1247,9 @@ function renderMain() {
   if (S.surface!=='ops') return;
   const panel=document.getElementById('main-panel');
   if (!S.selected) { panel.innerHTML=`<div class="main__empty"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round"/></svg><p>Select an operator to begin</p><span>Choose from the left panel to start a conversation</span></div>`; return; }
-  const c=S.cells.find(x=>x.id===S.selected); if(!c)return;
+  const c=S.operators.find(x=>x.id===S.selected); if(!c)return;
   const msgs=S.messages[c.id]||[], d=SD[c.status]||'dot--offline';
-  const av=c.isBeacon?'topbar__avatar--beacon':c.isWorker?'topbar__avatar--worker':'topbar__avatar--cell';
+  const av=c.isBeacon?'topbar__avatar--beacon':c.isWorker?'topbar__avatar--worker':'topbar__avatar--operator';
   const ini=c.isBeacon?'⬡':initials(c.name);
   const cmds=c.isBeacon?BCMDS:c.isWorker?WCMDS:CCMDS;
   const mOpen=S.cmdMenuOpen[c.id]?'':'cmd-menu--hidden';
@@ -1249,7 +1267,7 @@ function renderMain() {
   let mHTML='';
   msgs.forEach(m=>{
     if (m.type==='system'||m.type==='thought') return;
-    const isU=m.type==='user', avC=isU?'msg-av--user':c.isBeacon?'msg-av--beacon':c.isWorker?'msg-av--worker':'msg-av--cell';
+    const isU=m.type==='user', avC=isU?'msg-av--user':c.isBeacon?'msg-av--beacon':c.isWorker?'msg-av--worker':'msg-av--operator';
     const nm=isU?'You':c.name, i2=isU?'AP':c.isBeacon?'⬡':initials(c.name);
     const ct=m.html||`<div class="msg-text">${esc(m.text)}</div>`;
     mHTML+=`<div class="chat-msg"><div class="msg-av ${avC}">${i2}</div><div class="msg-body"><div class="msg-header"><span class="msg-name">${esc(nm)}</span><span class="msg-time">${esc(m.time)}</span></div>${ct}</div></div>`;
@@ -1322,7 +1340,7 @@ function renderRunsSurface() {
         </select>
         <select class="sfil" onchange="S.runsFilterWorker=this.value;renderRunsSurface()">
           <option value="">All workers</option>
-          ${S.cells.filter(c=>c.isWorker).map(c=>`<option value="${c.id}"${S.runsFilterWorker===c.id?' selected':''}>${c.name}</option>`).join('')}
+          ${S.operators.filter(c=>c.isWorker).map(c=>`<option value="${c.id}"${S.runsFilterWorker===c.id?' selected':''}>${c.name}</option>`).join('')}
         </select>
         <span class="spacer"></span>
         <span style="font-family:var(--mono);font-size:10px;color:var(--gray-400)">${runs.length} runs</span>
@@ -1352,7 +1370,7 @@ function renderRunsSurface() {
 function renderRunRow(run) {
   const cls={running:'run-status--run',completed:'run-status--done',failed:'run-status--fail'}[run.status]||'run-status--pend';
   const dur=run.endedAt?((run.endedAt-run.startedAt)/1000).toFixed(1)+'s':'…';
-  const wName=S.cells.find(c=>c.id===run.workerId)?.name||run.workerId;
+  const wName=S.operators.find(c=>c.id===run.workerId)?.name||run.workerId;
   const sel=S.selectedRun===run.id;
   return `<div class="run-row${sel?' run-row--active':''}" onclick="toggleRunDetail('${run.id}')">
     <div class="run-status ${cls}"></div>
@@ -1377,7 +1395,7 @@ function renderObsSurface() {
   const avgDur=done.length?done.reduce((s,r)=>s+(r.endedAt-r.startedAt),0)/done.length/1000:0;
   const totalTok=allRuns.reduce((s,r)=>s+(r.tokensIn||0)+(r.tokensOut||0),0);
   // Per-worker breakdown from real run data
-  const workerStats=S.cells.filter(c=>c.isWorker).map(c=>{
+  const workerStats=S.operators.filter(c=>c.isWorker).map(c=>{
     const wRuns=S.runs[c.id]||[];
     return {name:c.name, runs:wRuns.length, cost:wRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0), status:c.status};
   });
@@ -1456,7 +1474,7 @@ function renderApprovalsSurface() {
   }
 }
 function renderApprovalCard(a, resolved) {
-  const wName=S.cells.find(c=>c.id===a.workerId)?.name||a.workerId;
+  const wName=S.operators.find(c=>c.id===a.workerId)?.name||a.workerId;
   const age=Math.round((Date.now()-a.createdAt)/60000);
   return `<div class="approval-card approval-card--${a.risk}" style="${resolved?'opacity:.55':''}">
     <div class="approval-header"><div class="approval-title">${esc(a.title)}</div><span class="approval-risk risk--${a.risk}">${a.risk.toUpperCase()}</span></div>
@@ -1926,7 +1944,7 @@ function switchSurface(surface) {
 function switchToRuns(id) { S.selected=id; S.surface='runs'; switchSurface('runs'); }
 
 /* ═══ ACTIONS ═══ */
-async function selectCell(id) {
+async function selectOperator(id) {
   stopThoughtPolling(S.selected);
   S.selected=id; S.cmdMenuOpen[id]=false; S.modelDDOpen=false; delete S.activity[id];
   if (!S.messages[id]||!S.messages[id].length) { const v=await Vault.loadMessages(id); if(v)S.messages[id]=v; else S.messages[id]=[]; }
@@ -1934,7 +1952,7 @@ async function selectCell(id) {
   if (S.surface!=='ops') switchSurface('ops'); else renderMain();
   if (isWorker(id)) startThoughtPolling(id);
 }
-function filterCells(q) { S.filter=q; renderSidebar(); }
+function filterOperators(q) { S.filter=q; renderSidebar(); }
 function toggleCmd(id) { S.cmdMenuOpen[id]=!S.cmdMenuOpen[id]; renderMain(); }
 function runCmd(cmd) { if(!S.selected)return; S.cmdMenuOpen[S.selected]=false; if(!S.messages[S.selected])S.messages[S.selected]=[]; S.messages[S.selected].push({time:timeNow(),type:'user',text:cmd}); renderMain(); handleCommand(S.selected,cmd); }
 function doSend() { const inp=document.getElementById('chat-input'); if(!inp||!inp.value.trim())return; sendMsg(S.selected,inp.value.trim()); inp.value=''; inp.style.height='44px'; }
@@ -1961,7 +1979,7 @@ async function doStopWorker(id) {
   await Vault.appendAuditEvent({id:'audit_'+Date.now(),ts:Date.now(),icon:'🔒',action:`Worker stopped: ${id}`,actor:'operator',time:timeNow()});
 }
 function toggleRunDetail(id) { S.selectedRun=S.selectedRun===id?null:id; renderRunsSurface(); }
-function replayRun(id) { const r=Object.values(S.runs).flat().find(x=>x.id===id); if(r)selectCell(r.workerId); }
+function replayRun(id) { const r=Object.values(S.runs).flat().find(x=>x.id===id); if(r)selectOperator(r.workerId); }
 function exportRuns() { const data=JSON.stringify(getFilteredRuns(),null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download='prism_runs.json';a.click();URL.revokeObjectURL(url); }
 function showAddWorker() { alert('Add worker:\n\nRegister a new worker by providing a WorkerManifest:\n• id (unique)\n• name / role\n• apiBaseUrl (e.g. http://localhost:8004)\n• supportsThoughts / supportsPanel\n• metricsSchema\n\nWorker SDK and manifest editor: Studio surface → Phase 2'); }
 /* ═══ HEALTH SURFACE (merged Observability + System Health) ═══ */
@@ -1976,7 +1994,7 @@ async function renderHealthSurface() {
   const totalCost  = allRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0);
   const avgDur     = done.length ? done.reduce((s,r)=>s+(r.endedAt-r.startedAt),0)/done.length/1000 : 0;
   const totalTok   = allRuns.reduce((s,r)=>s+(r.tokensIn||0)+(r.tokensOut||0),0);
-  const workerStats= S.cells.filter(c=>c.isWorker).map(c=>{
+  const workerStats= S.operators.filter(c=>c.isWorker).map(c=>{
     const wRuns=S.runs[c.id]||[];
     return {name:c.name, runs:wRuns.length, cost:wRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0), status:c.status};
   });
@@ -2657,35 +2675,37 @@ function scrollChat(){requestAnimationFrame(()=>{const e=document.getElementById
 
 /* ═══ DEMO DATA ═══ */
 function demoDB() {
-  const COMPS = [
-    {id:'crew',     role:'Operator Registry'},
-    {id:'vault',    role:'Memory & Storage'},
-    {id:'sentinel', role:'Security & Policy'},
-    {id:'curtain',  role:'Encryption'},
-    {id:'stitch',   role:'Automation'},
-    {id:'vanguard', role:'Gateway'},
-    {id:'handshake',role:'API Bridge'},
-    {id:'bell',     role:'Chat Interface'},
-    {id:'almanac',  role:'Knowledge Base'},
-    {id:'prism',    role:'Dashboard'},
+  // Fallback list when PRISM is not reachable — shows operators, not kernel components
+  const OPS = [
+    {id:'recon',                  name:'RECON',               role:'Intelligence', desc:'Outbound lead research agent'},
+    {id:'scout',                  name:'SCOUT',               role:'Inbound',      desc:'Lead capture & qualification'},
+    {id:'quote',                  name:'QUOTE',               role:'Sales',        desc:'Proposal & RFQ generator'},
+    {id:'chief',                  name:'CHIEF',               role:'Intelligence', desc:'Executive briefing agent'},
+    {id:'aurelia',                name:'Aurelia',             role:'Executive',    desc:'Personal executive assistant'},
+    {id:'debrief',                name:'Debrief',             role:'Sales',        desc:'Post-call intelligence logger'},
+    {id:'competition-researcher', name:'Competition Research',role:'Intelligence', desc:'Competitive intelligence agent'},
+    {id:'jr-programmer',          name:'Jr. Programmer',      role:'Engineering',  desc:'Software development assistant'},
   ];
-  return COMPS.map(c => ({
-    id:c.id, name:c.id.toUpperCase(), role:c.role,
-    status:'offline', model:'—', routing:'local', port:null,
-    completion:0, hours:0, done:0, total:0,
-    lastAction:'—', uptime:'—', files:[],
-    currentTask:'Cascadia not running',
-    isBeacon:false, isWorker:false, hasPanel:false, uiPath:'/',
+  return OPS.map(o => ({
+    id: o.id, name: o.name, role: o.role,
+    status: 'offline', model: '—', routing: 'local', port: null,
+    completion: 0, hours: 0, done: 0, total: 0,
+    lastAction: 'offline', uptime: '—', files: [],
+    currentTask: o.desc,
+    isBeacon: false,
+    isWorker:  WORKER_MANIFESTS[o.id]?.isWorker  || false,
+    hasPanel:  WORKER_MANIFESTS[o.id]?.supportsPanel || false,
+    uiPath: '/',
   }));
 }
 function ensureBeacon() {
-  if(!S.cells.find(c=>c.id==='beacon'))S.cells.unshift({id:'beacon',name:'Beacon',role:'System Orchestrator',status:'active',model:S.model||'qwen2.5-3b-instruct-q4_k_m.gguf',routing:'100% local',completion:0,hours:0,done:0,total:0,lastAction:'All systems nominal',uptime:'99.9%',files:[],currentTask:'Monitoring all cells',isBeacon:true,isWorker:false});
-  S.cells.sort((a,b)=>a.id==='beacon'?-1:b.id==='beacon'?1:0);
+  if(!S.operators.find(c=>c.id==='beacon'))S.operators.unshift({id:'beacon',name:'Beacon',role:'System Orchestrator',status:'active',model:S.model||'qwen2.5-3b-instruct-q4_k_m.gguf',routing:'100% local',completion:0,hours:0,done:0,total:0,lastAction:'All systems nominal',uptime:'99.9%',files:[],currentTask:'Routing across all operators',isBeacon:true,isWorker:false});
+  S.operators.sort((a,b)=>a.id==='beacon'?-1:b.id==='beacon'?1:0);
 }
 
 /* ═══ INIT ═══ */
 initApprovals();
-S.cells=demoDB(); ensureBeacon();
+S.operators=demoDB(); ensureBeacon();
 
 // Load persisted runs from vault on startup
 Vault.loadAllRuns().then(runs=>{
@@ -2700,8 +2720,8 @@ Vault.loadAllRuns().then(runs=>{
 renderSidebar(); renderMain(); updateNavBadges();
 
 (async()=>{
-  await refreshCells();
-  setInterval(refreshCells, POLL);
+  await refreshOperators();
+  setInterval(refreshOperators, POLL);
   startLivePoll();
   loadModelsFromPRISM();
   refreshOperators();
