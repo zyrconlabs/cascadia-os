@@ -1,5 +1,5 @@
 """
-curtain/curtain.py - Cascadia OS v0.34
+curtain/curtain.py - Cascadia OS v0.43
 CURTAIN: Encryption layer for Cascadia OS.
 
 Owns: transport encryption, at-rest data protection, key derivation,
@@ -16,12 +16,12 @@ Cryptographic primitives:
                       No length truncation — full plaintext preserved
 
 Upgrade: encrypt_field/decrypt_field replaced from XOR+SHA256
-keystream (placeholder, no authentication, 32-byte limit) to AES-256-GCM
+keystream to AES-256-GCM
 (authenticated encryption, arbitrary length, tamper-evident).
 Public interface is unchanged — callers require no modification.
 """
 # MATURITY: PRODUCTION — HMAC-SHA256 signing and AES-256-GCM field encryption.
-# Asymmetric key exchange is v0.4 roadmap.
+# Asymmetric key exchange is planned.
 from __future__ import annotations
 
 import argparse
@@ -239,7 +239,7 @@ class CurtainService:
             'signing': 'HMAC-SHA256',
             'field_encryption': 'AES-256-GCM',
             'key_derivation': 'PBKDF2-HMAC-SHA256 (100k iterations)',
-            'asymmetric': 'roadmap v0.4',
+            'asymmetric': 'planned',
         }
 
     def start(self) -> None:

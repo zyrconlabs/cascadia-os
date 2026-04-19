@@ -1,1 +1,1 @@
-# ALMANAC - Cascadia OS v0.34 field guide
+# ALMANAC - Cascadia OS v0.43 field guide

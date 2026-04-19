@@ -22,7 +22,7 @@ else
         --model "$LLAMA_MODEL" \
         --host 127.0.0.1 --port 8080 \
         --ctx-size 4096 --n-gpu-layers 99 \
-        --alias zyrcon-ai-v0.1 \
+        --alias qwen2.5-3b-instruct-q4_k_m.gguf \
         > data/logs/llamacpp.log 2>&1 &
     sleep 6
     curl -sf http://127.0.0.1:8080/health > /dev/null && echo "✓ llama.cpp ready" || echo "✗ llama.cpp failed — check data/logs/llamacpp.log"

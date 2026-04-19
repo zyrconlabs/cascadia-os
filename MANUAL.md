@@ -1,4 +1,4 @@
-# Cascadia OS v0.34 — Manual
+# Cascadia OS v0.43 — Manual
 
 ## What changed in v0.31
 

@@ -1,5 +1,5 @@
 """
-workflow_runtime.py - Cascadia OS v0.34
+workflow_runtime.py - Cascadia OS v0.43
 Owns one durable, executable workflow runtime for the built-in lead follow-up path.
 Does not own HTTP transport, UI collection, or external provider auth.
 
@@ -81,6 +81,7 @@ class WorkflowRuntime:
         granted_permissions: Optional[Iterable[str]] = None,
         policy_rules: Optional[Dict[str, str]] = None,
         sentinel_port: Optional[int] = None,
+        sentinel_fail_open: bool = False,
     ) -> None:
         self.store = RunStore(database_path)
         self.journal = StepJournal(self.store)
@@ -96,6 +97,9 @@ class WorkflowRuntime:
         self.installed_assets = list(installed_assets or self._discover_installed_assets())
         self.granted_permissions = list(granted_permissions or self._discover_permissions())
         self.sentinel_port: Optional[int] = sentinel_port  # SENTINEL risk check port
+        # Fail-open override — False by default (production safe)
+        # Set sentinel_fail_open: true in config.json for dev/demo environments only
+        self._sentinel_fail_open: bool = sentinel_fail_open  # False = fail-closed (production default)
 
     # ------------------------------------------------------------------
     # Public API
@@ -279,12 +283,22 @@ class WorkflowRuntime:
     def _check_sentinel(self, run_id: str, action: str, operator_id: str) -> Optional[Dict[str, Any]]:
         """
         Check action against SENTINEL before execution.
-        Returns None if allowed, or a failure dict if blocked.
-        Falls back gracefully if SENTINEL is unreachable.
+        Returns None if allowed, or a failure dict if blocked/unreachable.
+
+        Safety default: FAIL CLOSED.
+        If SENTINEL is configured but unreachable, side-effect steps are
+        blocked — not allowed. This is the correct default for a system
+        selling trusted autonomy. To override for dev/demo environments,
+        set sentinel_fail_open: true in config.json.
+
         Owns: SENTINEL integration. Does not own risk policy definition.
         """
         if not self.sentinel_port:
-            return None  # SENTINEL not configured — allow
+            return None  # SENTINEL not configured — allow (no safety layer installed)
+
+        # Check whether fail-open is explicitly enabled in config (dev/demo only)
+        fail_open = self._sentinel_fail_open
+
         try:
             body = json.dumps({
                 'action': action,
@@ -306,8 +320,18 @@ class WorkflowRuntime:
                         'state': {},
                     }
                 return None  # allowed or requires_approval — let policy handle approval
-        except Exception:
-            return None  # SENTINEL unreachable — fail open
+        except Exception as exc:
+            if fail_open:
+                # Dev/demo override — log and continue
+                return None
+            # Production default: FAIL CLOSED — block side effects when safety is unavailable
+            return {
+                'status': 'failed',
+                'reason': f'SENTINEL unreachable — side effect blocked for safety ({action}). '
+                          f'Set sentinel_fail_open: true in config to override for dev/demo. '
+                          f'Error: {exc}',
+                'state': {},
+            }
 
     def _execute_step(
         self,

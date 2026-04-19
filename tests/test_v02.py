@@ -1,8 +1,10 @@
 """
-tests/test_v02.py - Cascadia OS v0.34
+tests/test_v02.py - Cascadia OS v0.43
 Full integration test suite covering all named components.
 """
 from __future__ import annotations
+
+from cascadia import VERSION_SHORT
 
 import sys
 import os
@@ -576,7 +578,7 @@ class TestDurabilityIntegration(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print('\n=== Cascadia OS v0.34 — Full Test Suite ===\n')
+    print(f'\\n=== Cascadia OS {VERSION_SHORT} — Full Test Suite ===\\n')
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for cls in [

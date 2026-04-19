@@ -155,5 +155,7 @@
       "context": 8192,
       "recommended_for": "image analysis, document OCR, visual workflows"
     }
-  ]
+  ],
+  "sentinel_fail_open": false,
+  "sentinel_fail_open_note": "Production default is false (fail-closed): if SENTINEL is unreachable, side-effect steps are blocked. Set true only for dev/demo environments."
 }

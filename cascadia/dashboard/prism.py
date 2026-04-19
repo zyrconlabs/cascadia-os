@@ -1,5 +1,5 @@
 """
-prism/prism.py - Cascadia OS v0.34
+prism/prism.py - Cascadia OS v0.43
 PRISM: Command center and dashboard aggregation layer.
 
 Owns: aggregating status from all Cascadia OS components,
@@ -114,7 +114,7 @@ class PrismService:
         total_count = len(component_states)
 
         return 200, {
-            'cascadia_os': 'v0.34',
+            'cascadia_os': 'v0.43',
             'generated_at': _now(),
             'system': {
                 'flint_state': flint.get('state', 'unknown'),

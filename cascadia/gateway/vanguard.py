@@ -1,5 +1,5 @@
 """
-vanguard/vanguard.py - Cascadia OS v0.34
+vanguard/vanguard.py - Cascadia OS v0.43
 ZYRCON VANGUARD: Communication gateway.
 
 Owns: inbound channel routing (email, webhook, SMS, API calls),
@@ -174,7 +174,7 @@ class VanguardService:
         """
         Dispatch an outbound message through a registered channel.
         For webhook and email channels: forwards to HANDSHAKE for real execution.
-        For other channels: logs and queues (adapters are v0.43 roadmap).
+        For other channels: logs and queues (SMTP/SMS adapters planned).
         """
         channel   = payload.get('channel', 'webhook')
         recipient = payload.get('recipient', '')

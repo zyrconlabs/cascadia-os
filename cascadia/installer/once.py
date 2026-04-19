@@ -1,5 +1,5 @@
 """
-once.py - Cascadia OS v0.34
+once.py - Cascadia OS v0.43
 ONCE: Installer software for Cascadia OS.
 
 Owns: environment checks, directory setup, database initialization,

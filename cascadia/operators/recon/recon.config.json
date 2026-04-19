@@ -3,5 +3,5 @@
   "cascadia_port": 4011,
   "vault_dir": "./data/vault/operators/recon",
   "task_dir": "./cascadia/operators/recon/tasks/current",
-  "model": "zyrcon-ai-v0.1"
+  "model": "qwen2.5-3b-instruct-q4_k_m.gguf"
 }

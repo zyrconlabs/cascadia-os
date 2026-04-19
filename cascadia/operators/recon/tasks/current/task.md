@@ -1,7 +1,7 @@
 ---
 name: example-task
 goal: Find warehouse facility managers and operations directors in Houston TX with contact details
-model: zyrcon-ai-v0.1
+model: qwen2.5-3b-instruct-q4_k_m.gguf
 fields:
   - full_name: Full name of the person
   - title: Job title

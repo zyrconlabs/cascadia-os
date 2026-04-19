@@ -43,7 +43,7 @@ LLM_ENDPOINTS = {
     "zyrcon-fast": "http://127.0.0.1:4011/v1/chat/completions",
 }
 DEFAULT_MODEL    = "zyrcon-3b"
-ANTHROPIC_MODEL  = "zyrcon-ai-v0.1"   # local llama.cpp model via FLINT proxy
+ANTHROPIC_MODEL  = "qwen2.5-3b-instruct-q4_k_m.gguf"   # local llama.cpp model via FLINT proxy
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 LOGS_DIR.mkdir(parents=True, exist_ok=True)

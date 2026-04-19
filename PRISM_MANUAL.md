@@ -133,7 +133,7 @@ All endpoints are served by the PRISM component at `http://127.0.0.1:6300`.
 
 ```json
 {
-  "cascadia_os": "v0.34",
+  "cascadia_os": "v0.43",
   "generated_at": "...",
   "system": {
     "flint_state": "ready",

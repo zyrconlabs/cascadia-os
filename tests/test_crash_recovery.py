@@ -1,5 +1,5 @@
 """
-tests/test_crash_recovery.py - Cascadia OS v0.34
+tests/test_crash_recovery.py - Cascadia OS v0.43
 Failure drills. These test what matters most:
 
   1. Kill mid-run -> restart -> resume from last committed step (not step 0)
@@ -20,6 +20,8 @@ These are the tests the v2.0 guide defines as "definition of done":
   - maintenance restart pauses and resumes safely
 """
 from __future__ import annotations
+
+from cascadia import VERSION_SHORT
 
 import os
 import sys
@@ -475,7 +477,7 @@ class TestDependencyBlocking(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    print('\n=== Cascadia OS v0.34 — Crash Recovery & Failure Drills ===\n')
+    print(f'\\n=== Cascadia OS {VERSION_SHORT} — Crash Recovery & Failure Drills ===\\n')
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for cls in [TestKillAndResume, TestDuplicatePrevention,

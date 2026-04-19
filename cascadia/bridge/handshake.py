@@ -1,5 +1,5 @@
 """
-handshake/handshake.py - Cascadia OS v0.34
+handshake/handshake.py - Cascadia OS v0.43
 HANDSHAKE: API bridge to external services.
 
 Owns: connection registry for external APIs (CRMs, ERPs, payment systems),
@@ -20,7 +20,7 @@ Supported channels with real HTTP execution:
 All other registered service types are logged and queued for future adapters.
 """
 # MATURITY: PRODUCTION — Webhook and HTTP execution live. SMTP email adapter live.
-# CRM, ERP, calendar adapters are v0.42 roadmap.
+# CRM, ERP, calendar adapters planned — webhook/HTTP/email are live.
 from __future__ import annotations
 
 import argparse
@@ -256,7 +256,7 @@ class HandshakeService:
         else:
             # Queued — not yet implemented for this service type
             status, result = 'queued', {
-                'note': f'{conn.service_type} adapter is v0.42 roadmap',
+                'note': f'{conn.service_type} adapter not yet implemented — webhook/http/email are live.',
                 'queued_at': _now(),
             }
 
@@ -455,9 +455,9 @@ class HandshakeService:
             'webhook': 'POST JSON to any URL — live',
             'http': 'GET/POST/PUT/PATCH/DELETE to registered base_url — live',
             'email': 'SMTP send via smtplib — live (requires smtp_* config)',
-            'crm': 'HubSpot/Salesforce/Zoho — v0.42 roadmap',
-            'erp': 'QuickBooks/NetSuite — v0.42 roadmap',
-            'calendar': 'Google Calendar/Outlook — v0.42 roadmap',
+            'crm': 'HubSpot/Salesforce/Zoho — planned',
+            'erp': 'QuickBooks/NetSuite — planned',
+            'calendar': 'Google Calendar/Outlook — planned',
         }
 
     def start(self) -> None:

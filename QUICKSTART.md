@@ -111,7 +111,7 @@ Your config is at `~/cascadia-os/config.json`. Key settings:
 {
   "llm": {
     "provider": "llamacpp",
-    "model": "zyrcon-ai-v0.1",
+    "model": "qwen2.5-3b-instruct-q4_k_m.gguf",
     "base_url": "http://127.0.0.1:8080"
   },
   "curtain": {
