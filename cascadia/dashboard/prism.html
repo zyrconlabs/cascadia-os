@@ -594,7 +594,7 @@ input[type="file"]{display:none}
    All backend calls go through GatewayContract.
    Swap kernels by replacing this object's impls.
    ════════════════════════════════════════════ */
-const GW = 'http://localhost:7001'; // Legacy gateway (not used in Cascadia mode)
+let GW = 'http://127.0.0.1:4011'; // FLINT LLM proxy — always available when Cascadia runs, updated from /api/prism/models
 const PRISM_URL = window.location.origin; // Always same origin as serving host — no CORS issues
 
 async function prismFetch(path) {
@@ -705,6 +705,9 @@ async function loadModelsFromPRISM() {
       } else if (MODELS.length) {
         S.model = MODELS[0].id;
       }
+      // Use FLINT proxy for chat (always available); fall back to direct llm_base_url
+      if (data.flint_proxy_url) GW = data.flint_proxy_url;
+      else if (data.llm_base_url) GW = data.llm_base_url;
       if (S.surface === 'ops') renderMain();
     }
   } catch(_) {}
