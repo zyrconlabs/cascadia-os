@@ -30,7 +30,7 @@ Installs Homebrew (if needed), SwiftBar, Cascadia OS, registers a login agent, a
 
 ## 🎬 Run the Demo
 
-After installing, run the investor demo — ~90 seconds end-to-end:
+After installing, run the demo — ~90 seconds end-to-end:
 
 ```bash
 bash demo.sh
