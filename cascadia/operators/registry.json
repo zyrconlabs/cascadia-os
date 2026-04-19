@@ -10,7 +10,8 @@
       "status": "production",
       "port": 8002,
       "autonomy": "autonomous",
-      "sample_output": "samples/recon-houston-warehouse-leads-2026-04-18.csv"
+      "sample_output": "samples/recon-houston-warehouse-leads-2026-04-18.csv",
+      "health_path": "/api/health"
     },
     {
       "id": "scout",
