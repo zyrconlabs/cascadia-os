@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Cascadia OS startup wrapper — used by launchd
-# Starts llama.cpp then hands off to the watchdog
 cd "/Users/andy/cascadia-os"
 
 INSTALL_DIR="/Users/andy/cascadia-os"
@@ -10,7 +9,6 @@ LOG_DIR="$INSTALL_DIR/data/logs"
 
 mkdir -p "$LOG_DIR"
 
-# Use venv python if available
 if [[ ! -f "$VENV_PYTHON" ]]; then
     VENV_PYTHON="$(command -v python3)"
 fi
@@ -33,5 +31,19 @@ if [[ -n "$LLAMA_BIN" && -f "$LLAMA_BIN" && -n "$MODEL_FILE" ]]; then
     fi
 fi
 
-# Start Cascadia OS via watchdog (this is the long-running process launchd manages)
+# Start operators after kernel is ready (runs in background)
+(
+    sleep 15
+    if ! curl -sf http://127.0.0.1:8002/api/health > /dev/null 2>&1; then
+        mkdir -p "$INSTALL_DIR/data/vault/operators/recon/tasks/current"
+        "$VENV_PYTHON" "$INSTALL_DIR/cascadia/operators/recon/dashboard.py" \
+            >> "$LOG_DIR/recon.log" 2>&1 &
+    fi
+    if ! curl -sf http://127.0.0.1:7002/api/health > /dev/null 2>&1; then
+        "$VENV_PYTHON" "$INSTALL_DIR/cascadia/operators/scout/scout_server.py" \
+            >> "$LOG_DIR/scout.log" 2>&1 &
+    fi
+) &
+
+# Hand off to watchdog — launchd manages this process
 exec "$VENV_PYTHON" -m cascadia.kernel.watchdog --config "$CONFIG"
