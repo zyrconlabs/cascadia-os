@@ -16,7 +16,8 @@ die()     { echo -e "${RED}[cascadia] ERROR:${NC} $*" >&2; exit 1; }
 bold()    { echo -e "${BOLD}$*${NC}"; }
 
 MODEL_ARG="${1:-}"
-MODELS_DIR="${CASCADIA_MODELS_DIR:-$HOME/Ai Models}"
+# Models live inside the cascadia-os install folder
+MODELS_DIR="${CASCADIA_MODELS_DIR:-$INSTALL_DIR/models}"
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_PATH="$INSTALL_DIR/config.json"
 

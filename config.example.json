@@ -6,8 +6,10 @@
     "model": null,
     "base_url": "http://127.0.0.1:8080",
     "configured": false,
-    "note": "Run install.sh or `python -m cascadia.installer.once` to configure. For llama.cpp set base_url to http://127.0.0.1:8080. For Ollama set base_url to http://127.0.0.1:11434",
-    "active_model_id": "qwen2.5-3b"
+    "note": "models_dir is relative to the cascadia-os install directory. Run setup-llm.sh to download models and configure automatically.",
+    "active_model_id": "qwen2.5-3b",
+    "models_dir": "./models",
+    "llama_bin": ""
   },
   "flint": {
     "heartbeat_file": "./data/runtime/flint.heartbeat",

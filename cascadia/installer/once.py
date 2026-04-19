@@ -284,9 +284,13 @@ def _terminal_ai_setup() -> Dict[str, Any]:
         sz = input('\n  Size [1-3, default 2]: ').strip() or '2'
         m = {'1': '3b', '2': '7b', '3': '14b'}.get(sz, '7b')
         fname = f'qwen2.5-{m}-instruct-q4_k_m.gguf'
+        default_path = f'./models/{fname}'
+        custom_path = input(f'  Model path [default: {default_path}]: ').strip()
+        model_path = custom_path or default_path
         return {'llm': {'provider': 'llama-cpp', 'model': fname,
-                        'model_path': f'~/cascadia-os/models/{fname}',
-                        'auto_download': True, 'n_gpu_layers': -1}}
+                        'model_path': model_path,
+                        'base_url': 'http://127.0.0.1:8080',
+                        'auto_download': False, 'n_gpu_layers': -1}}
 
     elif choice == '2':
         provider = input('  Provider [openai/anthropic/groq, default: openai]: ').strip() or 'openai'

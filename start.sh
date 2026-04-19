@@ -7,7 +7,10 @@ REPO="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO"
 
 LLAMA_BIN="$HOME/llama.cpp/build/bin/llama-server"
-LLAMA_MODEL="$HOME/ai models/qwen2.5-3b-instruct-q4_k_m.gguf"
+# Model directory — reads from config.json, defaults to ./models inside install dir
+MODELS_DIR=$(python3 -c "import json,os; c=json.load(open('config.json')); d=c.get('llm',{}).get('models_dir','./models'); print(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath('config.json')),d)) if d.startswith('.') else os.path.expanduser(d))" 2>/dev/null || echo "$REPO/models")
+MODEL_FILE=$(python3 -c "import json; c=json.load(open('config.json')); print(c.get('llm',{}).get('model','qwen2.5-3b-instruct-q4_k_m.gguf'))" 2>/dev/null || echo "qwen2.5-3b-instruct-q4_k_m.gguf")
+LLAMA_MODEL="$MODELS_DIR/$MODEL_FILE"
 
 echo "Starting Cascadia OS full stack..."
 echo ""
@@ -33,7 +36,9 @@ if curl -sf http://127.0.0.1:4011/health > /dev/null 2>&1; then
     echo "✓ Cascadia OS already running"
 else
     echo "▸ Starting Cascadia OS..."
-    python3 -m cascadia.kernel.watchdog --config config.json >> data/logs/flint.log 2>&1 &
+    PYTHON="${REPO}/.venv/bin/python"
+    [[ ! -f "$PYTHON" ]] && PYTHON="python3"
+    "$PYTHON" -m cascadia.kernel.watchdog --config config.json >> data/logs/flint.log 2>&1 &
     sleep 10
     curl -sf http://127.0.0.1:4011/health > /dev/null && echo "✓ Cascadia OS ready (11/11)" || echo "✗ Cascadia OS failed"
 fi
@@ -47,7 +52,7 @@ else
     if [[ ! -f data/vault/operators/recon/tasks/current/task.md ]]; then
         cp cascadia/operators/recon/tasks/current/task.md data/vault/operators/recon/tasks/current/
     fi
-    python3 cascadia/operators/recon/recon_worker.py >> data/logs/recon.log 2>&1 &
+    "$PYTHON" cascadia/operators/recon/recon_worker.py >> data/logs/recon.log 2>&1 &
     sleep 2
     ps aux | grep -q "[r]econ_worker" && echo "✓ RECON worker running" || echo "✗ RECON failed"
 fi
