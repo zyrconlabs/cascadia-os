@@ -1966,61 +1966,93 @@ async function renderHealthSurface() {
   const panel = document.getElementById('main-panel');
   panel.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;overflow-y:auto';
 
-  // Build observability metrics from session state
+  // Observability data (from original renderObsSurface)
   const allRuns    = Object.values(S.runs).flat();
   const done       = allRuns.filter(r=>r.status==='completed');
   const failed     = allRuns.filter(r=>r.status==='failed');
   const totalCost  = allRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0);
-  const totalTok   = allRuns.reduce((s,r)=>s+(r.tokensIn||0)+(r.tokensOut||0),0);
   const avgDur     = done.length ? done.reduce((s,r)=>s+(r.endedAt-r.startedAt),0)/done.length/1000 : 0;
-  const pending    = S.approvals.filter(a=>a.status==='pending').length;
+  const totalTok   = allRuns.reduce((s,r)=>s+(r.tokensIn||0)+(r.tokensOut||0),0);
   const workerStats= S.cells.filter(c=>c.isWorker).map(c=>{
     const wRuns=S.runs[c.id]||[];
-    return {name:c.name, runs:wRuns.length, cost:wRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0)};
+    return {name:c.name, runs:wRuns.length, cost:wRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0), status:c.status};
   });
   const maxCost = Math.max(...workerStats.map(w=>w.cost), 0.000001);
-  const maxRuns = Math.max(...workerStats.map(w=>w.runs), 1);
+  const gwLabel = S.connected ? 'Live' : 'Offline';
+  const logLines = [
+    `<span class="${S.connected?'lok':'lwarn'}">[${timeNow()}] Gateway ${S.connected?'CONNECTED':'OFFLINE'}</span>`,
+    `<span class="lok">[${timeNow()}] Vault: IndexedDB v3 active</span>`,
+    `<span class="linfo">[${timeNow()}] Runs: ${allRuns.length} total | ${done.length} ok | ${failed.length} fail</span>`,
+    `<span class="linfo">[${timeNow()}] Tokens: ${totalTok.toLocaleString()} session</span>`,
+    `<span class="linfo">[${timeNow()}] Cost: $${totalCost.toFixed(6)} session</span>`,
+    `<span class="${S.approvals.filter(a=>a.status==='pending').length?'lwarn':'lok'}">[${timeNow()}] Approvals pending: ${S.approvals.filter(a=>a.status==='pending').length}</span>`,
+    S.connected
+      ? `<span class="linfo">[${timeNow()}] Thought polling: active</span>`
+      : `<span class="lwarn">[${timeNow()}] Gateway metrics require connection</span>`,
+  ].join('\n');
 
   panel.innerHTML = `
     <div class="topbar">
       <div class="topbar__left"><div style="font-size:15px;font-weight:700;color:var(--navy-800)">Health &amp; Observability</div></div>
       <div class="topbar__right">
-        <span style="font-size:11px;font-family:var(--mono);color:var(--text-dim)" id="hs-label">Checking…</span>
+        <button class="hbtn">Prometheus <span class="badge-preview">Preview</span></button>
+        <button class="hbtn">OTEL <span class="badge-preview">Preview</span></button>
+        <span style="font-size:11px;font-family:var(--mono);color:var(--text-dim);margin-left:8px" id="hs-label">Checking…</span>
         <span style="font-size:13px;font-weight:700;color:var(--navy-800);font-family:var(--mono)" id="hs-count">—/—</span>
         <button class="hbtn" onclick="refreshHealth()">↻ Refresh</button>
       </div>
     </div>
+    <div class="surface">
 
-    <!-- Observability metric cards -->
-    <div class="obs-grid" style="padding:0 20px">
-      <div class="obs-card obs-card--green"><div class="obs-card__val">${done.length}</div><div class="obs-card__label">Completed</div><div class="obs-card__sub">session runs</div></div>
-      <div class="obs-card ${failed.length?'obs-card--red':''}"><div class="obs-card__val">${failed.length}</div><div class="obs-card__label">Failed</div><div class="obs-card__sub">session runs</div></div>
-      <div class="obs-card"><div class="obs-card__val">${allRuns.length}</div><div class="obs-card__label">Total runs</div><div class="obs-card__sub">session</div></div>
-      <div class="obs-card"><div class="obs-card__val">$${totalCost.toFixed(4)}</div><div class="obs-card__label">Cost</div><div class="obs-card__sub">session</div></div>
-      <div class="obs-card"><div class="obs-card__val">${(totalTok/1000).toFixed(1)}k</div><div class="obs-card__label">Tokens</div><div class="obs-card__sub">session</div></div>
-      <div class="obs-card"><div class="obs-card__val">${avgDur.toFixed(1)}s</div><div class="obs-card__label">Avg duration</div><div class="obs-card__sub">completed</div></div>
-      <div class="obs-card ${pending?'obs-card--red':'obs-card--green'}"><div class="obs-card__val">${pending}</div><div class="obs-card__label">Pending</div><div class="obs-card__sub">approvals</div></div>
-      <div class="obs-card ${S.connected?'obs-card--green':'obs-card--red'}"><div class="obs-card__val">${S.connected?'Live':'Off'}</div><div class="obs-card__label">Gateway</div><div class="obs-card__sub">:6300</div></div>
+      <!-- Observability metric cards (original) -->
+      <div class="obs-grid">
+        <div class="obs-card obs-card--green"><div class="obs-card__val">${done.length}</div><div class="obs-card__label">Completed runs</div><div class="obs-card__sub">Session · vault</div></div>
+        <div class="obs-card"><div class="obs-card__val">${allRuns.length}</div><div class="obs-card__label">Total runs</div><div class="obs-card__sub">Session · vault</div></div>
+        <div class="obs-card ${failed.length?'obs-card--red':'obs-card--green'}"><div class="obs-card__val">${failed.length}</div><div class="obs-card__label">Failed runs</div><div class="obs-card__sub">Session · vault</div></div>
+        <div class="obs-card"><div class="obs-card__val">$${totalCost.toFixed(4)}</div><div class="obs-card__label">Total cost</div><div class="obs-card__sub">Session · vault</div></div>
+        <div class="obs-card"><div class="obs-card__val">${totalTok.toLocaleString()}</div><div class="obs-card__label">Tokens used</div><div class="obs-card__sub">Session · vault</div></div>
+        <div class="obs-card obs-card--green"><div class="obs-card__val">${avgDur.toFixed(1)}s</div><div class="obs-card__label">Avg run duration</div><div class="obs-card__sub">Completed runs</div></div>
+        <div class="obs-card"><div class="obs-card__val">${S.approvals.filter(a=>a.status==='pending').length}</div><div class="obs-card__label">Pending approvals</div><div class="obs-card__sub">Live</div></div>
+        <div class="obs-card ${S.connected?'obs-card--green':'obs-card--red'}"><div class="obs-card__val">${gwLabel}</div><div class="obs-card__label">Gateway</div><div class="obs-card__sub">:6300</div></div>
+      </div>
+
+      <!-- Cost by worker (original) -->
+      <div class="obs-chart">
+        <div class="obs-chart__title">Cost by worker (session · real data)</div>
+        ${workerStats.length
+          ? workerStats.map(w=>`<div class="bar-row"><div class="bar-label">${esc(w.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${(w.cost/maxCost*100).toFixed(1)}%"></div></div><div class="bar-val">$${w.cost.toFixed(4)}</div></div>`).join('')
+          : `<div style="font-size:12px;color:var(--gray-400);padding:8px 0">No cost data — interact with workers to generate runs</div>`}
+      </div>
+
+      <!-- Runs by worker (original) -->
+      <div class="obs-chart">
+        <div class="obs-chart__title">Runs by worker (session · real data)</div>
+        ${workerStats.length
+          ? workerStats.map(w=>{const maxR=Math.max(...workerStats.map(x=>x.runs),1);return`<div class="bar-row"><div class="bar-label">${esc(w.name)}</div><div class="bar-track"><div class="bar-fill bar-fill--green" style="width:${(w.runs/maxR*100).toFixed(1)}%"></div></div><div class="bar-val">${w.runs} runs</div></div>`;}).join('')
+          : `<div style="font-size:12px;color:var(--gray-400);padding:8px 0">No runs yet</div>`}
+      </div>
+
+      <!-- Gateway metrics (original) -->
+      <div class="obs-chart">
+        <div class="obs-chart__title">Gateway metrics (requires connection)</div>
+        ${S.connected
+          ? `<div class="bar-row"><div class="bar-label">VRAM</div><div class="bar-track"><div class="bar-fill" style="width:38%"></div></div><div class="bar-val">3.8 GB</div></div>
+             <div class="bar-row"><div class="bar-label">CPU</div><div class="bar-track"><div class="bar-fill bar-fill--green" style="width:12%"></div></div><div class="bar-val">12%</div></div>
+             <div class="bar-row"><div class="bar-label">Latency p50</div><div class="bar-track"><div class="bar-fill bar-fill--green" style="width:24%"></div></div><div class="bar-val">240ms</div></div>
+             <div class="bar-row"><div class="bar-label">tok/sec</div><div class="bar-track"><div class="bar-fill bar-fill--green" style="width:76%"></div></div><div class="bar-val">38 t/s</div></div>`
+          : `<div style="font-size:12px;color:var(--gray-400);padding:4px 0">Gateway offline — connect to see live inference metrics</div>`}
+      </div>
+
+      <!-- System log (original) -->
+      <div class="obs-chart"><div class="obs-chart__title">System log</div><div class="obs-log">${logLines}</div></div>
+
+      <!-- Component status (from health) -->
+      <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.08em;padding:16px 0 8px">Component Status</div>
+      <div id="hgrid"><div style="padding:12px 0;color:var(--text-dim);font-size:12px">Loading…</div></div>
+
     </div>
-
-    <!-- Worker bars -->
-    ${workerStats.length ? `
-    <div style="padding:12px 20px 0">
-      <div class="obs-chart">
-        <div class="obs-chart__title">Runs by worker</div>
-        ${workerStats.map(w=>`<div class="bar-row"><div class="bar-label">${esc(w.name)}</div><div class="bar-track"><div class="bar-fill bar-fill--green" style="width:${(w.runs/maxRuns*100).toFixed(1)}%"></div></div><div class="bar-val">${w.runs}</div></div>`).join('')}
-      </div>
-      <div class="obs-chart">
-        <div class="obs-chart__title">Cost by worker</div>
-        ${workerStats.map(w=>`<div class="bar-row"><div class="bar-label">${esc(w.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${(w.cost/maxCost*100).toFixed(1)}%"></div></div><div class="bar-val">$${w.cost.toFixed(4)}</div></div>`).join('')}
-      </div>
-    </div>` : ''}
-
-    <!-- Component health grid -->
-    <div style="padding:16px 20px 6px;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.08em">Component Status</div>
-    <div class="health-grid" id="hgrid"><div style="padding:12px 8px;color:var(--text-dim);font-size:12px">Loading…</div></div>
     ${_healthButtons()}
-  `;
+  \`;
   await refreshHealth();
 }
 
