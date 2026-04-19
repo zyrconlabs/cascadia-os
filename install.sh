@@ -132,77 +132,22 @@ info "Running first-time setup (cascadia.installer.once)..."
 "$VENV_DIR/bin/python" -m cascadia.installer.once --dir "$INSTALL_DIR"
 success "Setup complete."
 
-# ── 8. AI model setup ────────────────────────────────────────────────────────
-info "Setting up AI inference..."
+# ── 8. Browser setup wizard ──────────────────────────────────────────────────
+info "Opening AI setup wizard in your browser..."
 echo ""
-echo "  How should Cascadia run AI?"
-echo ""
-echo "  [1] Local  — private, free, runs on your Mac (installs llama.cpp + Qwen)"
-echo "  [2] API    — OpenAI, Anthropic, or Groq (requires API key)"
-echo "  [3] Ollama — use a model you already have in Ollama"
-echo "  [4] Skip   — configure later with: bash setup-llm.sh"
-echo ""
-read -r -p "  Choice [1-4, default 1]: " AI_CHOICE
-AI_CHOICE="${AI_CHOICE:-1}"
+echo "  ┌──────────────────────────────────────────────┐"
+echo "  │  A browser window will open for setup.       │"
+echo "  │  Complete the setup there, then come back.   │"
+echo "  │                                              │"
+echo "  │  If browser does not open:                   │"
+echo "  │  → http://127.0.0.1:4010                     │"
+echo "  └──────────────────────────────────────────────┘"
 echo ""
 
-if [[ "$AI_CHOICE" == "1" ]]; then
-    echo "  Model size:"
-    echo "  [1] 3B  — 2.0 GB · 4 GB RAM min · Fast  (recommended)"
-    echo "  [2] 7B  — 4.7 GB · 8 GB RAM min · Balanced"
-    echo "  [3] 14B — 8.9 GB · 16 GB RAM min · Best quality"
-    echo ""
-    read -r -p "  Size [1-3, default 1]: " MODEL_CHOICE
-    case "${MODEL_CHOICE:-1}" in
-        2) MODEL_SIZE="7b"  ;;
-        3) MODEL_SIZE="14b" ;;
-        *) MODEL_SIZE="3b"  ;;
-    esac
-    bash "$INSTALL_DIR/setup-llm.sh" "$MODEL_SIZE"
+# Run the setup wizard — blocks until user completes it
+"$VENV_DIR/bin/python" -m cascadia.installer.once     --dir "$INSTALL_DIR"     --config config.json
 
-elif [[ "$AI_CHOICE" == "2" ]]; then
-    read -r -p "  Provider [openai/anthropic/groq, default: openai]: " AI_PROVIDER
-    AI_PROVIDER="${AI_PROVIDER:-openai}"
-    read -r -p "  API key: " AI_KEY
-    DEFAULT_MODEL="gpt-4o-mini"
-    [[ "$AI_PROVIDER" == "anthropic" ]] && DEFAULT_MODEL="claude-haiku-4-5-20251001"
-    [[ "$AI_PROVIDER" == "groq" ]] && DEFAULT_MODEL="llama-3.3-70b-versatile"
-    python3 -c "
-import json
-c = json.load(open('$INSTALL_DIR/config.json'))
-c['llm'] = {'provider': '$AI_PROVIDER', 'api_key': '$AI_KEY',
-             'model': '$DEFAULT_MODEL', 'configured': True}
-json.dump(c, open('$INSTALL_DIR/config.json', 'w'), indent=2)
-print('  Cloud API configured')
-"
-    success "Cloud API configured: $AI_PROVIDER"
-
-elif [[ "$AI_CHOICE" == "3" ]]; then
-    OLLAMA_MODELS=$(python3 -c "
-from urllib import request as ur; import json
-try:
-    with ur.urlopen('http://localhost:11434/api/tags', timeout=2) as r:
-        print(' '.join(m['name'] for m in json.loads(r.read()).get('models',[])))
-except: pass
-" 2>/dev/null)
-    if [[ -z "$OLLAMA_MODELS" ]]; then
-        warn "Ollama not running. Start Ollama, then run: bash setup-llm.sh"
-    else
-        info "Ollama models: $OLLAMA_MODELS"
-        read -r -p "  Model name: " OLLAMA_MODEL
-        python3 -c "
-import json
-c = json.load(open('$INSTALL_DIR/config.json'))
-c['llm'] = {'provider': 'ollama', 'model': '$OLLAMA_MODEL',
-             'base_url': 'http://localhost:11434', 'configured': True}
-json.dump(c, open('$INSTALL_DIR/config.json', 'w'), indent=2)
-"
-        success "Ollama configured: $OLLAMA_MODEL"
-    fi
-
-else
-    warn "AI setup skipped — run later: bash setup-llm.sh"
-fi
+success "Setup wizard complete"
 
 # ── 9. Launcher script ───────────────────────────────────────────────────────
 LAUNCHER="$HOME/.local/bin/cascadia"

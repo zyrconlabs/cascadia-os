@@ -144,9 +144,111 @@ class SetupServer:
         self._result: Optional[Dict[str, Any]] = None
         self._done = threading.Event()
         self._httpd: Optional[HTTPServer] = None
+        self._progress_events: list = []  # SSE event queue
+        self._progress_lock = threading.Lock()
+        self._download_thread: Optional[threading.Thread] = None
 
     def wait_for_completion(self, timeout: float = 300.0) -> bool:
         return self._done.wait(timeout=timeout)
+
+    def push_event(self, event_type: str, data: dict) -> None:
+        """Push a progress event to all SSE listeners."""
+        with self._progress_lock:
+            self._progress_events.append({'type': event_type, 'data': data})
+
+    def _run_download(self, model_size: str, models_dir: str) -> None:
+        """Download model and install llama.cpp in background thread."""
+        import subprocess, shutil, urllib.request, os
+        MODEL_URLS = {
+            '3b':  ('qwen2.5-3b-instruct-q4_k_m.gguf',
+                    'https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf'),
+            '7b':  ('qwen2.5-7b-instruct-q4_k_m.gguf',
+                    'https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf'),
+            '14b': ('Qwen2.5-14B-Instruct-Q4_K_M.gguf',
+                    'https://huggingface.co/Qwen/Qwen2.5-14B-Instruct-GGUF/resolve/main/Qwen2.5-14B-Instruct-Q4_K_M.gguf'),
+            'vl':  ('qwen2.5-vl-7b-instruct-q4_k_m.gguf',
+                    'https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/qwen2.5-vl-7b-instruct-q4_k_m.gguf'),
+        }
+        fname, url = MODEL_URLS.get(model_size, MODEL_URLS['3b'])
+        os.makedirs(models_dir, exist_ok=True)
+        model_path = os.path.join(models_dir, fname)
+
+        # Step 1: install llama.cpp
+        self.push_event('step', {'id': 'llama', 'status': 'running', 'label': 'Installing llama.cpp'})
+        llama_bin = ''
+        for candidate in ['/opt/homebrew/bin/llama-server', '/usr/local/bin/llama-server',
+                           os.path.expanduser('~/llama.cpp/build/bin/llama-server')]:
+            if os.path.isfile(candidate):
+                llama_bin = candidate
+                break
+        if not llama_bin:
+            try:
+                subprocess.run(['brew', 'install', 'llama.cpp'], check=True,
+                               capture_output=True, timeout=300)
+                for candidate in ['/opt/homebrew/bin/llama-server', '/usr/local/bin/llama-server']:
+                    if os.path.isfile(candidate):
+                        llama_bin = candidate
+                        break
+                self.push_event('step', {'id': 'llama', 'status': 'ok', 'label': 'llama.cpp installed', 'detail': llama_bin})
+            except Exception as e:
+                self.push_event('step', {'id': 'llama', 'status': 'error', 'label': 'llama.cpp install failed', 'detail': str(e)})
+                return
+        else:
+            self.push_event('step', {'id': 'llama', 'status': 'ok', 'label': 'llama.cpp found', 'detail': llama_bin})
+
+        # Step 2: check if model already exists
+        if os.path.isfile(model_path):
+            size_gb = os.path.getsize(model_path) / 1e9
+            self.push_event('step', {'id': 'download', 'status': 'ok',
+                'label': f'Model already downloaded ({size_gb:.1f} GB)', 'detail': model_path})
+        else:
+            # Step 2: download with progress
+            self.push_event('step', {'id': 'download', 'status': 'running',
+                'label': f'Downloading {fname}', 'detail': 'Starting download...'})
+            try:
+                req = urllib.request.Request(url, headers={'User-Agent': 'Cascadia-OS/0.43'})
+                with urllib.request.urlopen(req) as resp:
+                    total = int(resp.headers.get('Content-Length', 0))
+                    downloaded = 0
+                    chunk_size = 1024 * 1024  # 1MB
+                    with open(model_path, 'wb') as f:
+                        while True:
+                            chunk = resp.read(chunk_size)
+                            if not chunk:
+                                break
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            pct = int(downloaded / total * 100) if total else 0
+                            dl_gb = downloaded / 1e9
+                            tot_gb = total / 1e9
+                            self.push_event('progress', {'id': 'download',
+                                'pct': pct, 'downloaded': dl_gb, 'total': tot_gb,
+                                'label': f'Downloading {fname}',
+                                'detail': f'{dl_gb:.2f} GB / {tot_gb:.2f} GB ({pct}%)'})
+                self.push_event('step', {'id': 'download', 'status': 'ok',
+                    'label': f'Model downloaded ({fname})', 'detail': model_path})
+            except Exception as e:
+                if os.path.exists(model_path):
+                    os.remove(model_path)
+                self.push_event('step', {'id': 'download', 'status': 'error',
+                    'label': 'Download failed', 'detail': str(e)})
+                return
+
+        # Step 3: write config
+        self.push_event('step', {'id': 'config', 'status': 'running', 'label': 'Saving configuration'})
+        self._result = {'llm': {
+            'provider': 'llamacpp', 'model': fname,
+            'base_url': 'http://127.0.0.1:8080',
+            'models_dir': models_dir, 'llama_bin': llama_bin,
+            'n_gpu_layers': 99, 'ctx_size': 4096,
+            'configured': True, 'active_model_id': f'qwen2.5-{model_size}'
+        }}
+        self._apply_llm_config(self._result['llm'])
+        self.push_event('step', {'id': 'config', 'status': 'ok', 'label': 'Configuration saved'})
+        self.push_event('step', {'id': 'done', 'status': 'ok',
+            'label': 'Setup complete', 'detail': 'Starting Cascadia OS...'})
+        self._done.set()
+
 
     def _make_handler(self) -> type:
         server = self
@@ -191,6 +293,53 @@ class SetupServer:
                 elif self.path == '/api/setup/status':
                     self._send_json(200, {'done': server._done.is_set()})
 
+                elif self.path == '/api/setup/events':
+                    # SSE endpoint — returns all queued events as JSON array
+                    with server._progress_lock:
+                        events = list(server._progress_events)
+                    self._send(200, 'application/json', json.dumps(events).encode())
+
+                elif self.path == '/api/setup/hardware':
+                    import platform as _pl, subprocess as _sp
+                    arch = _pl.machine()
+                    ram_gb = 0
+                    try:
+                        if _pl.system() == 'Darwin':
+                            ram_bytes = int(_sp.check_output(['sysctl','-n','hw.memsize']).strip())
+                            ram_gb = ram_bytes // (1024**3)
+                        elif _pl.system() == 'Linux':
+                            with open('/proc/meminfo') as f:
+                                for line in f:
+                                    if line.startswith('MemTotal:'):
+                                        ram_gb = int(line.split()[1]) // (1024*1024)
+                    except Exception:
+                        pass
+                    gpu_type = 'none'
+                    if _pl.system() == 'Darwin':
+                        gpu_type = 'apple_silicon' if arch == 'arm64' else 'intel_mac'
+                    elif _pl.system() == 'Linux':
+                        try:
+                            _sp.run(['nvidia-smi'], capture_output=True, check=True)
+                            gpu_type = 'nvidia'
+                        except Exception:
+                            gpu_type = 'cpu_only'
+                    # Recommend based on hardware
+                    if gpu_type in ('apple_silicon', 'nvidia'):
+                        recommend = 'local'
+                        if ram_gb >= 16: rec_model = '7b'
+                        elif ram_gb >= 8: rec_model = '7b'
+                        else: rec_model = '3b'
+                    else:
+                        recommend = 'api'
+                        rec_model = '3b'
+                    self._send_json(200, {
+                        'arch': arch, 'ram_gb': ram_gb, 'gpu_type': gpu_type,
+                        'recommend': recommend, 'rec_model': rec_model,
+                        'ollama_models': _detect_ollama() or [],
+                        'platform': _pl.system(),
+                    })
+
+
                 else:
                     self._send_json(404, {'error': 'not found'})
 
@@ -198,13 +347,33 @@ class SetupServer:
                 if self.path == '/api/setup/apply':
                     payload = self._read_json()
                     server._result = payload
+                    server._apply_llm_config(payload.get('llm', {}))
                     server._done.set()
                     self._send_json(200, {'ok': True})
-                    # Shutdown after response reaches browser
-                    threading.Thread(
-                        target=lambda: (time.sleep(0.6), server._httpd and server._httpd.shutdown()),
-                        daemon=True,
-                    ).start()
+                elif self.path == '/api/setup/start-download':
+                    # Trigger model download in background thread
+                    payload = self._read_json()
+                    model_size = payload.get('model_size', '3b')
+                    models_dir = payload.get('models_dir',
+                        str(server.install_dir / 'models'))
+                    if server._download_thread and server._download_thread.is_alive():
+                        self._send_json(409, {'error': 'download already running'})
+                    else:
+                        server._download_thread = threading.Thread(
+                            target=server._run_download,
+                            args=(model_size, models_dir),
+                            daemon=True
+                        )
+                        server._download_thread.start()
+                        self._send_json(200, {'ok': True, 'started': True})
+                elif self.path == '/api/setup/skip':
+                    # User chose to skip or use API — apply config and finish
+                    payload = self._read_json()
+                    server._result = payload
+                    if payload.get('llm'):
+                        server._apply_llm_config(payload['llm'])
+                    server._done.set()
+                    self._send_json(200, {'ok': True})
                 else:
                     self._send_json(404, {'error': 'not found'})
 
