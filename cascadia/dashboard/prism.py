@@ -531,6 +531,36 @@ class PrismService:
             ('almanac',   6205, 'Runtime'),
             ('prism',     6300, 'Dashboard'),
         ]
+        # ── Operator agents — loaded from registry.json ──────────────────────
+        try:
+            registry_path = Path(__file__).parent.parent / 'operators' / 'registry.json'
+            registry = json.loads(registry_path.read_text())
+            for op in registry.get('operators', []):
+                port = op.get('port')
+                if not port:
+                    continue
+                health_path = op.get('health_path', '/health')
+                op_status = 'error'
+                op_detail = f'Port {port} — not running'
+                try:
+                    import urllib.request as _ur2
+                    with _ur2.urlopen(
+                        f'http://127.0.0.1:{port}{health_path}', timeout=1
+                    ) as r:
+                        op_status = 'ok'
+                        op_detail = f'Port {port} — online'
+                except Exception:
+                    pass
+                results[op['id']] = {
+                    'label': op.get('name', op['id']),
+                    'status': op_status,
+                    'detail': op_detail,
+                    'group': 'Operators',
+                    'port': port,
+                }
+        except Exception:
+            pass
+
         import urllib.request as _ur
         for name, port, group in COMPONENTS:
             try:
@@ -560,6 +590,7 @@ class PrismService:
             results.get(k, {}).get('status') == 'ok'
             for k in ['python', 'flint', 'prism', 'crew', 'vault']
         )
+        # Operators offline is a warning not a blocker — kernel being ready is what matters
 
         return 200, {
             'checks': results,
