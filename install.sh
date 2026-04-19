@@ -132,7 +132,79 @@ info "Running first-time setup (cascadia.installer.once)..."
 "$VENV_DIR/bin/python" -m cascadia.installer.once --dir "$INSTALL_DIR"
 success "Setup complete."
 
-# ── 8. Launcher script ───────────────────────────────────────────────────────
+# ── 8. AI model setup ────────────────────────────────────────────────────────
+info "Setting up AI inference..."
+echo ""
+echo "  How should Cascadia run AI?"
+echo ""
+echo "  [1] Local  — private, free, runs on your Mac (installs llama.cpp + Qwen)"
+echo "  [2] API    — OpenAI, Anthropic, or Groq (requires API key)"
+echo "  [3] Ollama — use a model you already have in Ollama"
+echo "  [4] Skip   — configure later with: bash setup-llm.sh"
+echo ""
+read -r -p "  Choice [1-4, default 1]: " AI_CHOICE
+AI_CHOICE="${AI_CHOICE:-1}"
+echo ""
+
+if [[ "$AI_CHOICE" == "1" ]]; then
+    echo "  Model size:"
+    echo "  [1] 3B  — 2.0 GB · 4 GB RAM min · Fast  (recommended)"
+    echo "  [2] 7B  — 4.7 GB · 8 GB RAM min · Balanced"
+    echo "  [3] 14B — 8.9 GB · 16 GB RAM min · Best quality"
+    echo ""
+    read -r -p "  Size [1-3, default 1]: " MODEL_CHOICE
+    case "${MODEL_CHOICE:-1}" in
+        2) MODEL_SIZE="7b"  ;;
+        3) MODEL_SIZE="14b" ;;
+        *) MODEL_SIZE="3b"  ;;
+    esac
+    bash "$INSTALL_DIR/setup-llm.sh" "$MODEL_SIZE"
+
+elif [[ "$AI_CHOICE" == "2" ]]; then
+    read -r -p "  Provider [openai/anthropic/groq, default: openai]: " AI_PROVIDER
+    AI_PROVIDER="${AI_PROVIDER:-openai}"
+    read -r -p "  API key: " AI_KEY
+    DEFAULT_MODEL="gpt-4o-mini"
+    [[ "$AI_PROVIDER" == "anthropic" ]] && DEFAULT_MODEL="claude-haiku-4-5-20251001"
+    [[ "$AI_PROVIDER" == "groq" ]] && DEFAULT_MODEL="llama-3.3-70b-versatile"
+    python3 -c "
+import json
+c = json.load(open('$INSTALL_DIR/config.json'))
+c['llm'] = {'provider': '$AI_PROVIDER', 'api_key': '$AI_KEY',
+             'model': '$DEFAULT_MODEL', 'configured': True}
+json.dump(c, open('$INSTALL_DIR/config.json', 'w'), indent=2)
+print('  Cloud API configured')
+"
+    success "Cloud API configured: $AI_PROVIDER"
+
+elif [[ "$AI_CHOICE" == "3" ]]; then
+    OLLAMA_MODELS=$(python3 -c "
+from urllib import request as ur; import json
+try:
+    with ur.urlopen('http://localhost:11434/api/tags', timeout=2) as r:
+        print(' '.join(m['name'] for m in json.loads(r.read()).get('models',[])))
+except: pass
+" 2>/dev/null)
+    if [[ -z "$OLLAMA_MODELS" ]]; then
+        warn "Ollama not running. Start Ollama, then run: bash setup-llm.sh"
+    else
+        info "Ollama models: $OLLAMA_MODELS"
+        read -r -p "  Model name: " OLLAMA_MODEL
+        python3 -c "
+import json
+c = json.load(open('$INSTALL_DIR/config.json'))
+c['llm'] = {'provider': 'ollama', 'model': '$OLLAMA_MODEL',
+             'base_url': 'http://localhost:11434', 'configured': True}
+json.dump(c, open('$INSTALL_DIR/config.json', 'w'), indent=2)
+"
+        success "Ollama configured: $OLLAMA_MODEL"
+    fi
+
+else
+    warn "AI setup skipped — run later: bash setup-llm.sh"
+fi
+
+# ── 9. Launcher script ───────────────────────────────────────────────────────
 LAUNCHER="$HOME/.local/bin/cascadia"
 mkdir -p "$HOME/.local/bin"
 cat > "$LAUNCHER" <<EOF
@@ -271,16 +343,86 @@ APPLESCRIPT
     fi
 fi
 
-# ── 13. Done ──────────────────────────────────────────────────────────────────
+# ── 13. Start Cascadia and verify ────────────────────────────────────────────
 echo ""
-success "════════════════════════════════════════"
-success " Cascadia OS v0.43 installed successfully"
-success "════════════════════════════════════════"
+info "Starting Cascadia OS..."
+
+# Kill any existing instance cleanly
+pkill -f "cascadia.kernel" 2>/dev/null || true
+sleep 2
+
+# Start watchdog using venv python
+PYTHON_BIN="$VENV_DIR/bin/python"
+[[ ! -f "$PYTHON_BIN" ]] && PYTHON_BIN="python3"
+
+mkdir -p "$INSTALL_DIR/data/logs"
+nohup "$PYTHON_BIN" -m cascadia.kernel.watchdog     --config "$INSTALL_DIR/config.json"     > "$INSTALL_DIR/data/logs/flint.log" 2>&1 &
+
+# Wait for FLINT to respond — up to 30 seconds
+info "Waiting for Cascadia to start..."
+STARTED=false
+for i in $(seq 1 30); do
+    if curl -sf http://127.0.0.1:4011/health > /dev/null 2>&1; then
+        STARTED=true
+        break
+    fi
+    sleep 1
+    [[ $((i % 5)) -eq 0 ]] && echo -n "."
+done
 echo ""
-echo "  Start:   cascadia"
-echo "  Config:  $INSTALL_DIR/config.json"
-echo "  Logs:    $INSTALL_DIR/data/logs/"
-echo ""
+
+if [[ "$STARTED" == "true" ]]; then
+    # Get component count
+    COMP_STATUS=$(curl -s http://127.0.0.1:4011/api/flint/status 2>/dev/null)
+    HEALTHY=$(echo "$COMP_STATUS" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    comps=d.get('components',[])
+    healthy=sum(1 for c in comps if c.get('status')=='ready')
+    print(f'{healthy}/{len(comps)}')
+except: print('?/?')
+" 2>/dev/null || echo "?/?")
+
+    echo ""
+    success "════════════════════════════════════════════"
+    success " Cascadia OS v0.43 is running"
+    success "════════════════════════════════════════════"
+    echo ""
+    echo "  Status:    ⬡ ${HEALTHY} components healthy"
+    echo "  Dashboard: http://localhost:6300"
+    echo "  Config:    $INSTALL_DIR/config.json"
+    echo "  Logs:      $INSTALL_DIR/data/logs/"
+    echo ""
+    echo "  Opening PRISM dashboard..."
+    sleep 1
+    [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300" 2>/dev/null || true
+    echo ""
+    echo "  ╔══════════════════════════════════════════════╗"
+    echo "  ║  Next steps:                                 ║"
+    echo "  ║  1. PRISM dashboard opened in your browser   ║"
+    echo "  ║  2. SwiftBar icon shows system status        ║"
+    echo "  ║  3. Run the demo: bash demo.sh               ║"
+    echo "  ║  4. Cascadia starts automatically at boot    ║"
+    echo "  ╚══════════════════════════════════════════════╝"
+    echo ""
+
+    # Refresh SwiftBar so menu bar icon appears immediately
+    [[ "$(uname)" == "Darwin" ]] && open -g "swiftbar://refreshAllPlugins" 2>/dev/null || true
+
+else
+    echo ""
+    warn "Cascadia did not respond within 30 seconds."
+    warn "Check logs: tail -50 $INSTALL_DIR/data/logs/flint.log"
+    echo ""
+    echo "  To start manually:"
+    echo "    cd $INSTALL_DIR"
+    echo "    python3 -m cascadia.kernel.watchdog --config config.json &"
+    echo ""
+    success "Installation complete — start manually with the command above."
+fi
+
+# ── PATH setup ────────────────────────────────────────────────────────────────
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     for profile in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile"; do
         if [[ -f "$profile" ]] && ! grep -q ".local/bin" "$profile"; then
