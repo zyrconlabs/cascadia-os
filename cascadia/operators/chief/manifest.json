@@ -1,0 +1,17 @@
+{
+  "id":            "chief",
+  "name":          "CHIEF",
+  "version":       "1.0.0",
+  "port":          8006,
+  "entry_point":   "cascadia.operators.chief.server",
+  "health_path":   "/api/health",
+  "ui_path":       "/",
+  "description":   "Executive intelligence briefing agent",
+  "prism_card":    true,
+  "autostart":     true,
+  "vault_dir":     "chief",
+  "dependencies":  ["flask", "flask-cors"],
+  "capabilities":  ["brief.generate", "anomaly.detect", "system.report"],
+  "autonomy_level": "autonomous",
+  "author":        "Zyrcon Labs"
+}

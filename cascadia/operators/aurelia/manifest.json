@@ -1,0 +1,17 @@
+{
+  "id":            "aurelia",
+  "name":          "Aurelia",
+  "version":       "1.0.0",
+  "port":          8009,
+  "entry_point":   "cascadia.operators.aurelia.server",
+  "health_path":   "/api/health",
+  "ui_path":       "/",
+  "description":   "Personal executive assistant",
+  "prism_card":    true,
+  "autostart":     true,
+  "vault_dir":     "aurelia",
+  "dependencies":  ["flask", "flask-cors"],
+  "capabilities":  ["commitment.track", "priority.manage", "delegation.log"],
+  "autonomy_level": "assistive",
+  "author":        "Zyrcon Labs"
+}

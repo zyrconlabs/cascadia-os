@@ -1,0 +1,17 @@
+{
+  "id":            "debrief",
+  "name":          "DEBRIEF",
+  "version":       "1.0.0",
+  "port":          8008,
+  "entry_point":   "cascadia.operators.debrief.server",
+  "health_path":   "/api/health",
+  "ui_path":       "/",
+  "description":   "Post-call intelligence logger",
+  "prism_card":    true,
+  "autostart":     true,
+  "vault_dir":     "debrief",
+  "dependencies":  ["flask", "flask-cors"],
+  "capabilities":  ["call.debrief", "action.extract", "followup.generate"],
+  "autonomy_level": "assistive",
+  "author":        "Zyrcon Labs"
+}

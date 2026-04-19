@@ -146,6 +146,9 @@ class OperatorManager:
                 if op._stopped:
                     continue
                 if not op.is_alive():
+                    if op.is_healthy():
+                        self.logger.info("OperatorManager: %s process gone but port healthy — skipping restart", op.name)
+                        continue
                     self.logger.warning("OperatorManager: %s exited — restarting in %ss", op.name, RESTART_DELAY)
                     time.sleep(RESTART_DELAY)
                     try:
