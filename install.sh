@@ -280,10 +280,17 @@ fi
 echo ""
 info "Starting Cascadia OS full stack (llama.cpp + all services)..."
 
+# Unload any old launchd agent first — prevents it respawning the old instance
+launchctl unload "$HOME/Library/LaunchAgents/com.zyrconlabs.cascadia.plist" 2>/dev/null || true
+sleep 1
+
 # Kill any stale instances
 pkill -f "cascadia.kernel" 2>/dev/null || true
 pkill -f "llama-server" 2>/dev/null || true
 sleep 2
+
+# Load the new launchd agent (points to new run.sh)
+launchctl load "$HOME/Library/LaunchAgents/com.zyrconlabs.cascadia.plist" 2>/dev/null || true
 
 # start.sh handles llama.cpp → Cascadia OS in correct order
 mkdir -p "$INSTALL_DIR/data/logs"

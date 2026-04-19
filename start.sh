@@ -18,6 +18,10 @@ echo ""
 # ── 1. llama.cpp ──────────────────────────────────────────────────────────
 if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
     echo "✓ llama.cpp already running"
+elif [[ ! -f "$LLAMA_BIN" ]]; then
+    echo "⚠ llama.cpp not installed — skipping (install via: brew install llama.cpp)"
+elif [[ ! -f "$LLAMA_MODEL" ]]; then
+    echo "⚠ AI model not downloaded yet — open PRISM → Settings to set up AI"
 else
     echo "▸ Starting llama.cpp (Qwen 3B)..."
     lsof -ti :8080 | xargs kill -9 2>/dev/null; sleep 1
@@ -32,9 +36,22 @@ else
 fi
 
 # ── 2. Cascadia OS ────────────────────────────────────────────────────────
+CASCADIA_RUNNING=false
 if curl -sf http://127.0.0.1:4011/health > /dev/null 2>&1; then
-    echo "✓ Cascadia OS already running"
-else
+    # Verify it's running from THIS directory, not a stale/backup instance
+    RUNNING_PID=$(pgrep -f "cascadia.kernel.watchdog" | head -1)
+    RUNNING_DIR=$(lsof -p "$RUNNING_PID" 2>/dev/null | grep cwd | awk '{print $NF}' || echo "")
+    if [[ "$RUNNING_DIR" == "$REPO" ]]; then
+        echo "✓ Cascadia OS already running"
+        CASCADIA_RUNNING=true
+    else
+        echo "▸ Restarting Cascadia OS (stale instance from different path)..."
+        pkill -f "cascadia.kernel" 2>/dev/null || true
+        sleep 2
+    fi
+fi
+
+if [[ "$CASCADIA_RUNNING" == "false" ]]; then
     echo "▸ Starting Cascadia OS..."
     PYTHON="${REPO}/.venv/bin/python"
     [[ ! -f "$PYTHON" ]] && PYTHON="python3"
