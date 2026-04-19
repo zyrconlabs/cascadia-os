@@ -93,6 +93,7 @@ class PrismService:
         self.runtime.register_route('GET',  '/api/prism/settings',        self.get_settings)
         self.runtime.register_route('POST', '/api/prism/settings',        self.save_settings)
         self.runtime.register_route('GET',  '/api/prism/setup-progress',  self.setup_progress)
+        self.runtime.register_route('POST', '/api/prism/almanac',          self.almanac_query)
 
     # ------------------------------------------------------------------
     # Aggregated views
@@ -312,6 +313,68 @@ class PrismService:
         """Serve the post-install health check page."""
         html = (Path(__file__).parent / "setup-complete.html").read_bytes()
         return 200, {"__html__": html}
+
+    def almanac_query(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Proxy natural-language queries to the ALMANAC service.
+        Converts a {query} payload to ALMANAC's /search endpoint and
+        returns a formatted answer. Same-origin proxy — no CORS issues.
+        """
+        import urllib.request as _ur
+        import urllib.error as _ue
+
+        query = payload.get('query', '').strip()
+        if not query:
+            return 400, {'error': 'query required'}
+
+        # Find ALMANAC port from config
+        almanac_port = 6205
+        for comp in self.config.get('components', []):
+            if comp.get('name', '').lower() == 'almanac':
+                almanac_port = comp.get('port', 6205)
+                break
+
+        try:
+            import json as _json
+            body = _json.dumps({'query': query}).encode('utf-8')
+            req = _ur.Request(
+                f'http://127.0.0.1:{almanac_port}/search',
+                data=body,
+                headers={'Content-Type': 'application/json'},
+                method='POST',
+            )
+            with _ur.urlopen(req, timeout=10) as r:
+                data = _json.loads(r.read())
+
+            results = data.get('results', [])
+            if not results:
+                return 200, {
+                    'answer': f'No results found for "{query}". Try asking about a specific component (VAULT, BEACON, SENTINEL...) or a term like "capability", "run", or "approval".',
+                    'query': query,
+                    'results': [],
+                }
+
+            # Format results into a readable answer
+            lines = []
+            for r in results[:5]:
+                if r['type'] == 'component':
+                    lines.append(f"<strong>{r['name']}</strong>: {r['match']}")
+                elif r['type'] == 'glossary':
+                    lines.append(f"<strong>{r['term']}</strong>: {r['match']}")
+                elif r['type'] == 'runbook':
+                    lines.append(f"📋 <strong>Runbook: {r['title']}</strong>")
+
+            answer = '<br>'.join(lines)
+            if data.get('count', 0) > 5:
+                answer += f'<br><em>…and {data["count"] - 5} more results</em>'
+
+            return 200, {'answer': answer, 'query': query, 'results': results}
+
+        except _ue.URLError as e:
+            return 502, {'error': f'ALMANAC not reachable: {e}',
+                         'answer': 'ALMANAC service is not responding. Make sure Cascadia is running: bash start.sh'}
+        except Exception as e:
+            return 500, {'error': str(e), 'answer': f'Error querying ALMANAC: {e}'}
 
     def full_health_check(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
         """

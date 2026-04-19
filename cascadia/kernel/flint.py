@@ -31,6 +31,16 @@ from cascadia.shared.logger import configure_logging
 class ReusableHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
 
+    def server_bind(self) -> None:
+        import socket as _socket
+        # SO_REUSEPORT prevents "Address already in use" on fast restarts (macOS/Linux)
+        if hasattr(_socket, 'SO_REUSEPORT'):
+            try:
+                self.socket.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEPORT, 1)
+            except (AttributeError, OSError):
+                pass
+        super().server_bind()
+
 
 @dataclass(slots=True)
 class ProcessEntry:

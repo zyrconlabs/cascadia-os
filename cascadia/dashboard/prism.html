@@ -2127,29 +2127,18 @@ async function sendAlmanac() {
   msgs.innerHTML += `<div class="alm-typing" id="${typingId}"><span></span><span></span><span></span></div>`;
   msgs.scrollTop = msgs.scrollHeight;
   try {
-    const res = await fetch(window.location.origin + '/api/prism/almanac-query', {
+    // PRISM proxies Almanac at /api/prism/almanac — same origin, no CORS
+    const res = await fetch(window.location.origin + '/api/prism/almanac', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({query: q, context: 'prism_ui'})
     });
-    if (!res.ok) throw new Error('no proxy');
     const data = await res.json();
     document.getElementById(typingId)?.remove();
-    msgs.innerHTML += `<div class="alm-msg-ai">${data.answer||data.response||data.result||'No answer returned.'}</div>`;
+    msgs.innerHTML += `<div class="alm-msg-ai">${data.answer||data.error||'No results found.'}</div>`;
   } catch(e) {
-    // fallback: try almanac direct
-    try {
-      const res2 = await fetch('http://127.0.0.1:6205/query', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({query:q, context:'prism_ui'})
-      });
-      const data2 = await res2.json();
-      document.getElementById(typingId)?.remove();
-      msgs.innerHTML += `<div class="alm-msg-ai">${data2.answer||data2.response||data2.result||'I am not sure about that.'}</div>`;
-    } catch(_) {
-      document.getElementById(typingId)?.remove();
-      msgs.innerHTML += `<div class="alm-msg-ai">Almanac is not responding. Make sure Cascadia is running: <strong>bash start.sh</strong></div>`;
-    }
+    document.getElementById(typingId)?.remove();
+    msgs.innerHTML += `<div class="alm-msg-ai">Could not reach ALMANAC (${e.message}). Make sure Cascadia is running: <strong>bash start.sh</strong></div>`;
   }
   msgs.scrollTop = msgs.scrollHeight;
 }
@@ -2185,8 +2174,13 @@ function renderTerminalSurface() {
       </div>
     </div>`;
   termPrint('system', 'Cascadia OS Terminal · PRISM Dashboard');
-  termPrint('system', `Connecting to ${location.host}/ws/terminal …`);
-  termConnect();
+  // WebSocket terminal requires backend WS handler (not yet in stdlib http.server)
+  // Show useful local shell info while WS is pending
+  termPrint('system', 'Cascadia OS — Local Command Reference');
+  termPrint('system', '────────────────────────────────────────');
+  termPrint('output', 'Live terminal requires WebSocket support in prism.py (roadmap).');
+  termPrint('output', 'Use this panel as a command reference. Type help for commands.');
+  termPrint('system', '────────────────────────────────────────');
   document.getElementById('term-input').focus();
 }
 
@@ -2274,16 +2268,42 @@ function termLocalExec(cmd) {
   const c = cmd.trim().toLowerCase();
   if (c === 'clear' || c === 'cls') { termClear(); return; }
   if (c === 'help') {
-    termPrint('output', 'Available commands (when connected to Cascadia):');
-    termPrint('output', '  cascadia status   — show system status');
-    termPrint('output', '  cascadia start    — start all services');
-    termPrint('output', '  cascadia stop     — stop all services');
-    termPrint('output', '  cascadia demo     — run demo mode');
-    termPrint('output', '  cascadia channel  — manage channels');
-    termPrint('output', '  clear             — clear terminal');
+    termPrint('system', 'Cascadia OS — Command Reference');
+    termPrint('output', '');
+    termPrint('output', 'STARTUP');
+    termPrint('output', '  bash start.sh                    — start all Cascadia services');
+    termPrint('output', '  bash stop.sh                     — stop all services gracefully');
+    termPrint('output', '  bash demo.sh                     — run operator demo');
+    termPrint('output', '');
+    termPrint('output', 'RUNTIME');
+    termPrint('output', '  python3 -m cascadia.kernel.watchdog --config config.json');
+    termPrint('output', '                                   — start watchdog directly');
+    termPrint('output', '  cat data/logs/flint.log          — tail watchdog log');
+    termPrint('output', '  bash setup-llm.sh                — download and install AI model');
+    termPrint('output', '');
+    termPrint('output', 'HEALTH CHECKS');
+    termPrint('output', '  curl -s localhost:6300/api/prism/health-check | python3 -m json.tool');
+    termPrint('output', '  curl -s localhost:6300/api/prism/hardware     | python3 -m json.tool');
+    termPrint('output', '  curl -s localhost:6300/api/prism/overview     | python3 -m json.tool');
+    termPrint('output', '');
+    termPrint('output', 'PORTS');
+    termPrint('output', '  5100 CREW  · 5101 VAULT  · 5102 SENTINEL · 5103 CURTAIN');
+    termPrint('output', '  6200 BEACON · 6201 STITCH · 6202 VANGUARD · 6203 HANDSHAKE');
+    termPrint('output', '  6204 BELL  · 6205 ALMANAC · 6300 PRISM');
+    termPrint('output', '');
+    termPrint('output', 'TERMINAL');
+    termPrint('output', '  clear / cls                      — clear terminal');
+    termPrint('output', '  help                             — show this reference');
     return;
   }
-  termPrint('error', 'Not connected to PRISM. Start Cascadia: bash start.sh');
+  if (c === 'clear' || c === 'cls') { termClear(); return; }
+  // Try to give useful feedback for common commands
+  if (c.startsWith('curl') || c.startsWith('cat ') || c.startsWith('bash ') || c.startsWith('python')) {
+    termPrint('error', 'Live shell not available — copy this command to your Terminal app.');
+    termPrint('system', 'WebSocket terminal support is on the roadmap for Cascadia v0.5.');
+    return;
+  }
+  termPrint('error', 'Unknown command: ' + cmd.split(' ')[0] + '. Type "help" for reference.');
 }
 
 function termClear() {
