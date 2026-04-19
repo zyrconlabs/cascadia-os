@@ -1225,8 +1225,21 @@ function renderSidebar() {
   const list=document.getElementById('op-list'); if(!list)return;
   const q=S.filter.toLowerCase();
   const operators=q?S.operators.filter(c=>c.name.toLowerCase().includes(q)||c.role.toLowerCase().includes(q)):S.operators;
+  const beacon=operators.find(c=>c.isBeacon);
   const workers=operators.filter(c=>!c.isBeacon);
   let html='';
+  if (beacon) {
+    const a=S.selected==='beacon'?' op-item--active':'';
+    const d=SD[beacon.status]||'dot--offline';
+    html+=`<div class="op-item op-item--beacon${a}" onclick="selectOperator('beacon')">
+      <div class="op-avatar op-avatar--beacon">⬡<div class="op-dot ${d}"></div></div>
+      <div class="op-body">
+        <div class="op-name">Beacon</div>
+        <div class="op-role">System Orchestrator</div>
+        <div class="op-meta"><span class="tag tag--neutral">Routing</span></div>
+      </div>
+    </div>`;
+  }
   if (workers.length) html+=`<div class="sidebar__section">Operators</div>`;
   workers.forEach(c=>{
     const a=S.selected===c.id?' op-item--active':'', d=SD[c.status]||'dot--offline', tg=ST[c.status]||'tag--offline', lb=SL[c.status]||'Offline';
@@ -2682,7 +2695,15 @@ function demoDB() {
     {id:'competition-researcher', name:'Competition Research',role:'Intelligence', desc:'Competitive intelligence agent'},
     {id:'jr-programmer',          name:'Jr. Programmer',      role:'Engineering',  desc:'Software development assistant'},
   ];
-  return OPS.map(o => ({
+  const beaconEntry = {
+    id:'beacon', name:'Beacon', role:'System Orchestrator',
+    status:'offline', model:S.model||'—', routing:'100% local',
+    completion:0, hours:0, done:0, total:0,
+    lastAction:'Monitoring all operators', uptime:'—', files:[],
+    currentTask:'Capability-aware routing across all operators',
+    isBeacon:true, isWorker:false, hasPanel:false, uiPath:'/',
+  };
+  return [beaconEntry, ...OPS.map(o => ({
     id: o.id, name: o.name, role: o.role,
     status: 'offline', model: '—', routing: 'local', port: null,
     completion: 0, hours: 0, done: 0, total: 0,
@@ -2692,7 +2713,7 @@ function demoDB() {
     isWorker:  WORKER_MANIFESTS[o.id]?.isWorker  || false,
     hasPanel:  WORKER_MANIFESTS[o.id]?.supportsPanel || false,
     uiPath: '/',
-  }));
+  }))];
 }
 function ensureBeacon() {
   if(!S.operators.find(c=>c.id==='beacon'))S.operators.unshift({id:'beacon',name:'Beacon',role:'System Orchestrator',status:'active',model:S.model||'qwen2.5-3b-instruct-q4_k_m.gguf',routing:'100% local',completion:0,hours:0,done:0,total:0,lastAction:'All systems nominal',uptime:'99.9%',files:[],currentTask:'Routing across all operators',isBeacon:true,isWorker:false});
