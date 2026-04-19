@@ -86,7 +86,7 @@ button{cursor:pointer;font-family:var(--font)}input,textarea,select{font-family:
 .tag--preview{color:var(--purple);background:var(--purple-soft);font-size:9px}.tag--approval{color:#b85c00;background:rgba(212,160,23,.15)}
 
 /* ── MAIN ── */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;min-width:0;background:var(--white)}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;min-width:0;background:var(--white);overflow-y:auto}
 .main__empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .main__empty svg{width:40px;height:40px;stroke:var(--gray-400);fill:none;stroke-width:1.2}
 .main__empty p{font-size:15px;font-weight:600;color:var(--navy-700)}.main__empty span{font-size:12px;color:var(--gray-500)}
@@ -400,6 +400,65 @@ input[type="file"]{display:none}
 
 /* ── SETTINGS SURFACE ── */
 .settings-wrap{max-width:640px;margin:0 auto;padding:24px 20px}
+
+/* ── ALMANAC OVERLAY ── */
+.alm-overlay{position:fixed;bottom:20px;right:20px;width:360px;max-height:520px;
+  background:var(--white);border:1px solid var(--gray-200);border-radius:16px;
+  box-shadow:0 8px 40px rgba(0,0,0,.18);display:flex;flex-direction:column;
+  z-index:9999;transform:translateY(20px) scale(.96);opacity:0;
+  pointer-events:none;transition:transform .2s ease,opacity .2s ease}
+.alm-overlay.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all}
+.alm-header{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--gray-100);flex-shrink:0}
+.alm-title{font-size:13px;font-weight:700;color:var(--navy-800)}
+.alm-close{background:none;border:none;font-size:16px;cursor:pointer;
+  color:var(--gray-500);line-height:1;padding:2px 6px;border-radius:6px}
+.alm-close:hover{background:var(--gray-100)}
+.alm-msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;
+  flex-direction:column;gap:10px;min-height:0}
+.alm-msg-user{align-self:flex-end;background:var(--purple);color:#fff;
+  padding:8px 12px;border-radius:12px 12px 2px 12px;font-size:12px;max-width:85%}
+.alm-msg-ai{align-self:flex-start;background:var(--gray-50);color:var(--navy-800);
+  padding:8px 12px;border-radius:12px 12px 12px 2px;font-size:12px;max-width:90%;
+  line-height:1.5;border:1px solid var(--gray-100)}
+.alm-typing{display:flex;gap:4px;align-items:center;padding:10px 12px;
+  background:var(--gray-50);border-radius:12px;width:fit-content}
+.alm-typing span{width:6px;height:6px;border-radius:50%;background:var(--gray-400);
+  animation:almBounce 1s infinite}
+.alm-typing span:nth-child(2){animation-delay:.15s}
+.alm-typing span:nth-child(3){animation-delay:.3s}
+@keyframes almBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+.alm-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--gray-100);flex-shrink:0}
+.alm-input{flex:1;border:1px solid var(--gray-200);border-radius:8px;padding:7px 10px;
+  font-size:12px;outline:none;font-family:inherit}
+.alm-input:focus{border-color:var(--purple)}
+.alm-send{background:var(--purple);color:#fff;border:none;border-radius:8px;
+  padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer}
+.alm-send:hover{opacity:.9}
+
+/* ── TERMINAL SURFACE ── */
+.term-wrap{display:flex;flex-direction:column;height:100vh;background:#0d1117;color:#c9d1d9;font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:13px}
+.term-topbar{display:flex;align-items:center;gap:7px;padding:10px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0}
+.term-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.term-dot--red{background:#ff5f57}.term-dot--yellow{background:#febc2e}.term-dot--green{background:#28c840}
+.term-label{font-size:12px;font-weight:600;color:#8b949e;margin-left:6px;flex:1}
+.term-ws-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px}
+.term-ws-badge--on{color:#3fb950;background:rgba(63,185,80,.12)}
+.term-ws-badge--off{color:#6e7681;background:rgba(110,118,129,.12)}
+.term-clear-btn{background:none;border:1px solid #30363d;color:#8b949e;border-radius:6px;
+  padding:2px 10px;font-size:11px;cursor:pointer;font-family:inherit}
+.term-clear-btn:hover{background:#21262d;color:#c9d1d9}
+.term-screen{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:2px;min-height:0}
+.term-line{line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.term-line--system{color:#58a6ff;font-style:italic}
+.term-line--cmd{color:#e6edf3;font-weight:600}
+.term-line--output{color:#c9d1d9}
+.term-line--error{color:#f85149}
+.term-inputrow{display:flex;align-items:center;padding:10px 20px;border-top:1px solid #21262d;flex-shrink:0;background:#0d1117}
+.term-prompt{color:#3fb950;font-weight:700;white-space:nowrap}
+.term-input{flex:1;background:transparent;border:none;outline:none;color:#e6edf3;
+  font-family:inherit;font-size:13px;caret-color:#e6edf3}
+.term-input::placeholder{color:#484f58}
 .settings-section{background:var(--white);border:1px solid var(--gray-100);
   border-radius:14px;overflow:hidden;margin-bottom:16px}
 .settings-section-head{padding:14px 20px;border-bottom:1px solid var(--gray-100);
@@ -552,6 +611,7 @@ async function sendAlmanac() {
     <button class="nav-btn" onclick="switchSurface('admin')" id="nav-admin"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="nav-tooltip">Admin & Gateway</span></button>
     <button class="nav-btn" onclick="switchSurface('settings')" id="nav-settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span class="nav-tooltip">Settings</span></button>
     <button class="nav-btn" onclick="switchSurface('health')" id="nav-health"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nav-tooltip">System Health</span></button>
+    <button class="nav-btn" onclick="switchSurface('terminal')" id="nav-terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span class="nav-tooltip">Terminal</span></button>
     <div class="nav-divider"></div>
     <button class="nav-btn" onclick="toggleAlmanac()" id="nav-almanac" style="margin-top:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nav-tooltip">Almanac — AI Help</span></button>
   </nav>
@@ -730,7 +790,7 @@ function isWorker(id) { return !!WORKER_MANIFESTS[id]?.isWorker; }
 /* ═══ STATE ═══ */
 const S = {
   surface:'ops', selected:null, cells:[], messages:{},
-  filter:'', model:S.model||'qwen2.5-3b-instruct-q4_k_m.gguf', cmdMenuOpen:{}, modelDDOpen:false,
+  filter:'', model:'qwen2.5-3b-instruct-q4_k_m.gguf', cmdMenuOpen:{}, modelDDOpen:false,
   workerPanelOpen:{}, activity:{}, connected:false,
   approvals:[], runs:{}, selectedRun:null,
   selectedNode:null, studioNodes:null,
@@ -1910,6 +1970,7 @@ function switchSurface(surface) {
   else if (surface==='admin') renderAdminSurface();
   else if (surface==='settings') renderSettingsSurface();
   else if (surface==='health') renderHealthSurface();
+  else if (surface==='terminal') renderTerminalSurface();
 }
 function switchToRuns(id) { S.selected=id; S.surface='runs'; switchSurface('runs'); }
 
@@ -1953,6 +2014,138 @@ function replayRun(id) { const r=Object.values(S.runs).flat().find(x=>x.id===id)
 function exportRuns() { const data=JSON.stringify(getFilteredRuns(),null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download='prism_runs.json';a.click();URL.revokeObjectURL(url); }
 function showAddWorker() { alert('Add worker:\n\nRegister a new worker by providing a WorkerManifest:\n• id (unique)\n• name / role\n• apiBaseUrl (e.g. http://localhost:8004)\n• supportsThoughts / supportsPanel\n• metricsSchema\n\nWorker SDK and manifest editor: Studio surface → Phase 2'); }
 function showHelp() {} // replaced by Almanac
+
+/* ═══ TERMINAL SURFACE ═══ */
+let _termWs = null;
+let _termHistory = [];
+let _termHistIdx = -1;
+let _termInput = '';
+
+function renderTerminalSurface() {
+  const panel = document.getElementById('main-panel');
+  panel.innerHTML = `
+    <div class="term-wrap">
+      <div class="term-topbar">
+        <span class="term-dot term-dot--red"></span>
+        <span class="term-dot term-dot--yellow"></span>
+        <span class="term-dot term-dot--green"></span>
+        <span class="term-label">Cascadia OS — Terminal</span>
+        <span id="term-ws-status" class="term-ws-badge term-ws-badge--off">● disconnected</span>
+        <button class="term-clear-btn" onclick="termClear()">Clear</button>
+      </div>
+      <div class="term-screen" id="term-screen"></div>
+      <div class="term-inputrow">
+        <span class="term-prompt">cascadia$&nbsp;</span>
+        <input class="term-input" id="term-input" autocomplete="off" autocorrect="off"
+          spellcheck="false" autofocus
+          onkeydown="termKeydown(event)"
+          oninput="termInputChange(this.value)"
+          placeholder="type a command…">
+      </div>
+    </div>`;
+  termPrint('system', 'Cascadia OS Terminal · PRISM Dashboard');
+  termPrint('system', 'Connecting to ws://127.0.0.1:6300/ws/terminal …');
+  termConnect();
+  document.getElementById('term-input').focus();
+}
+
+function termConnect() {
+  if (_termWs) { try { _termWs.close(); } catch(_) {} }
+  try {
+    _termWs = new WebSocket('ws://127.0.0.1:6300/ws/terminal');
+    _termWs.onopen = () => {
+      termSetStatus(true);
+      termPrint('system', 'Connected. Type commands below.');
+    };
+    _termWs.onmessage = (e) => {
+      termPrint('output', e.data);
+    };
+    _termWs.onerror = () => {
+      termSetStatus(false);
+      termPrint('error', 'WebSocket error — PRISM terminal endpoint not reachable.');
+      termPrint('system', 'Running in local echo mode. Start Cascadia with: bash start.sh');
+    };
+    _termWs.onclose = () => {
+      termSetStatus(false);
+    };
+  } catch(e) {
+    termSetStatus(false);
+    termPrint('error', 'Could not open WebSocket: ' + e.message);
+    termPrint('system', 'Running in local echo mode.');
+  }
+}
+
+function termSetStatus(online) {
+  const el = document.getElementById('term-ws-status');
+  if (!el) return;
+  el.textContent = online ? '● connected' : '● disconnected';
+  el.className = 'term-ws-badge ' + (online ? 'term-ws-badge--on' : 'term-ws-badge--off');
+}
+
+function termPrint(type, text) {
+  const screen = document.getElementById('term-screen');
+  if (!screen) return;
+  const line = document.createElement('div');
+  line.className = 'term-line term-line--' + type;
+  // Basic ANSI stripping for safety
+  line.textContent = text.replace(/\x1b\[[0-9;]*m/g, '');
+  screen.appendChild(line);
+  screen.scrollTop = screen.scrollHeight;
+}
+
+function termInputChange(val) { _termInput = val; }
+
+function termKeydown(e) {
+  const input = document.getElementById('term-input');
+  if (e.key === 'Enter') {
+    const cmd = input.value.trim();
+    if (!cmd) return;
+    termPrint('cmd', 'cascadia$ ' + cmd);
+    _termHistory.unshift(cmd);
+    _termHistIdx = -1;
+    input.value = '';
+    _termInput = '';
+    if (_termWs && _termWs.readyState === WebSocket.OPEN) {
+      _termWs.send(JSON.stringify({cmd}));
+    } else {
+      // Local echo fallback with basic built-ins
+      termLocalExec(cmd);
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (_termHistory.length) {
+      _termHistIdx = Math.min(_termHistIdx + 1, _termHistory.length - 1);
+      input.value = _termHistory[_termHistIdx] || '';
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _termHistIdx = Math.max(_termHistIdx - 1, -1);
+    input.value = _termHistIdx >= 0 ? (_termHistory[_termHistIdx] || '') : '';
+  } else if (e.key === 'l' && e.ctrlKey) {
+    e.preventDefault(); termClear();
+  }
+}
+
+function termLocalExec(cmd) {
+  const c = cmd.trim().toLowerCase();
+  if (c === 'clear' || c === 'cls') { termClear(); return; }
+  if (c === 'help') {
+    termPrint('output', 'Available commands (when connected to Cascadia):');
+    termPrint('output', '  cascadia status   — show system status');
+    termPrint('output', '  cascadia start    — start all services');
+    termPrint('output', '  cascadia stop     — stop all services');
+    termPrint('output', '  cascadia demo     — run demo mode');
+    termPrint('output', '  cascadia channel  — manage channels');
+    termPrint('output', '  clear             — clear terminal');
+    return;
+  }
+  termPrint('error', 'Not connected to PRISM. Start Cascadia: bash start.sh');
+}
+
+function termClear() {
+  const screen = document.getElementById('term-screen');
+  if (screen) screen.innerHTML = '';
+}
 /* ═══ SETTINGS SURFACE ═══ */
 let _hw = null;
 let _settingsMode = 'local';
@@ -1967,21 +2160,44 @@ async function renderSettingsSurface() {
     prismFetch('/api/prism/hardware'),
     prismFetch('/api/prism/settings'),
   ]);
-  _hw = hwR;
+
+  // Client-side hardware fallback when backend not available
+  let hw = hwR;
+  if (!hw) {
+    const ramGB = navigator.deviceMemory || null;
+    let gpuType = 'cpu_only', gpuLabel = 'Unknown';
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (gl) {
+        const dbgInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        const renderer = dbgInfo ? gl.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL) : '';
+        if (/apple/i.test(renderer))       { gpuType='apple_silicon'; gpuLabel='Apple Silicon — Metal GPU'; }
+        else if (/nvidia/i.test(renderer)) { gpuType='nvidia';        gpuLabel='NVIDIA GPU — CUDA'; }
+        else if (/amd|radeon/i.test(renderer)) { gpuType='amd';      gpuLabel='AMD GPU — ROCm'; }
+        else if (renderer)                 { gpuLabel = renderer.slice(0,40); }
+      }
+    } catch(_) {}
+    const rec = (ramGB||0) >= 16 ? '14b' : (ramGB||0) >= 8 ? '7b' : '3b';
+    hw = { ram_gb: ramGB, gpu_type: gpuType, gpu_label: gpuLabel, rec_model: rec, _clientDetected: true };
+  }
+
+  _hw = hw;
   const llm = setR?.llm || {};
   // Pre-select current values
   _settingsMode  = llm.provider === 'openai'||llm.provider==='anthropic'||llm.provider==='groq' ? 'api'
                  : llm.provider === 'ollama' ? 'ollama' : 'local';
-  _settingsModel = llm.active_model_id?.replace('qwen2.5-','') || hwR?.rec_model || '3b';
+  _settingsModel = llm.active_model_id?.replace('qwen2.5-','') || hw?.rec_model || '3b';
   _settingsProv  = llm.provider && ['openai','anthropic','groq'].includes(llm.provider) ? llm.provider : 'openai';
-  _renderSettingsBody(hwR, llm);
+  _renderSettingsBody(hw, llm);
 }
 
 function _renderSettingsBody(hw, llm) {
   const gpuIcon = {apple_silicon:'🍎',nvidia:'🎮',amd:'🔴',intel_mac:'💻',cpu_only:'💻'}[hw?.gpu_type||'']||'💻';
   const gpuOk   = ['apple_silicon','nvidia','amd'].includes(hw?.gpu_type||'');
-  const gpuLbl  = {apple_silicon:'Apple Silicon — Metal GPU',nvidia:'NVIDIA GPU — CUDA',
-    amd:'AMD GPU — ROCm',intel_mac:'Intel Mac — CPU only',cpu_only:'No GPU'}[hw?.gpu_type||''] || 'Unknown';
+  const gpuLbl  = hw?.gpu_label ||
+    ({apple_silicon:'Apple Silicon — Metal GPU',nvidia:'NVIDIA GPU — CUDA',
+    amd:'AMD GPU — ROCm',intel_mac:'Intel Mac — CPU only',cpu_only:'No GPU'}[hw?.gpu_type||''] || 'Unknown');
   const ramOk   = (hw?.ram_gb||0) >= 8;
   const MODELS = [
     {id:'3b',  n:'Qwen 2.5 3B',  d:'Fast · great for most tasks',  sz:'2.0 GB', r:4},
