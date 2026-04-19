@@ -34,8 +34,8 @@ PORTS = {
     "BELL":      (6204, "/health"),
     "ALMANAC":   (6205, "/health"),
     "PRISM":     (6300, "/health"),
-    "SCOUT":     (7000, "/api/health"),
-    "RECON":     (7001, "/api/health"),
+    "SCOUT":     (7002, "/api/health"),
+    "RECON":     (8002, "/api/health"),
 }
 
 def check(port: int, path: str) -> bool:
@@ -93,7 +93,7 @@ def open_url(url: str) -> None:
     webbrowser.open(url)
 
 def open_prism(_=None) -> None: open_url("http://localhost:6300/")
-def open_bell(_=None) -> None:  open_url("http://localhost:7000/bell")
+def open_bell(_=None) -> None:  open_url("http://localhost:7002/bell")
 def open_logs(_=None) -> None:
     import os
     if sys.platform == "darwin": os.system(f"open {LOG_DIR}")
@@ -104,8 +104,8 @@ def build_menu(icon: pystray.Icon) -> pystray.Menu:
     total = len(PORTS)
     online = online_count()
     flint_up = check(4011, "/health")
-    scout_up = check(7000, "/api/health")
-    recon_up = check(7001, "/api/health")
+    scout_up = check(7002, "/api/health")
+    recon_up = check(8002, "/api/health")
     prism_up = check(6300, "/health")
 
     items = [
