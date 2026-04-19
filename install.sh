@@ -246,6 +246,57 @@ PLIST
         success "Cascadia registered as login agent — starts automatically at boot" || \
         info "launchctl load failed — run manually: launchctl load $PLIST_PATH"
 
+    # ── Separate launchd plist for llama.cpp — auto-restarts on crash ─────────
+    LLAMA_PLIST_PATH="$PLIST_DIR/com.zyrconlabs.cascadia.llama.plist"
+    LLAMA_BIN_PATH="$HOME/llama.cpp/build/bin/llama-server"
+    # Find llama-server binary
+    for candidate in "/opt/homebrew/bin/llama-server" "/usr/local/bin/llama-server" "$LLAMA_BIN_PATH"; do
+        [[ -f "$candidate" ]] && LLAMA_BIN_PATH="$candidate" && break
+    done
+
+    cat > "$LLAMA_PLIST_PATH" << LLAMA_PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.zyrconlabs.cascadia.llama</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>
+MODEL=\$(python3 -c "import json; c=json.load(open('${INSTALL_DIR}/config.json')); l=c.get('llm',{}); print(l.get('models_dir','${INSTALL_DIR}/models').rstrip('/')+'/'+l.get('model',''))" 2>/dev/null);
+BIN=\$(python3 -c "import json; c=json.load(open('${INSTALL_DIR}/config.json')); print(c.get('llm',{}).get('llama_bin','${LLAMA_BIN_PATH}'))" 2>/dev/null || echo "${LLAMA_BIN_PATH}");
+GPU=\$(python3 -c "import json; c=json.load(open('${INSTALL_DIR}/config.json')); print(c.get('llm',{}).get('n_gpu_layers',99))" 2>/dev/null || echo "99");
+PROVIDER=\$(python3 -c "import json; c=json.load(open('${INSTALL_DIR}/config.json')); print(c.get('llm',{}).get('provider',''))" 2>/dev/null || echo "");
+[[ "\$PROVIDER" != "llamacpp" ]] && exit 0;
+[[ ! -f "\$MODEL" ]] && exit 0;
+[[ ! -f "\$BIN" ]] && exit 0;
+exec "\$BIN" --model "\$MODEL" --host 127.0.0.1 --port 8080 --ctx-size 4096 --n-gpu-layers "\$GPU"
+        </string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>${INSTALL_DIR}</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>${INSTALL_DIR}/data/logs/llamacpp.log</string>
+    <key>StandardErrorPath</key>
+    <string>${INSTALL_DIR}/data/logs/llamacpp.log</string>
+</dict>
+</plist>
+LLAMA_PLIST
+
+    launchctl unload "$LLAMA_PLIST_PATH" 2>/dev/null || true
+    launchctl load "$LLAMA_PLIST_PATH" 2>/dev/null && \
+        success "llama.cpp registered as login agent — auto-restarts on crash" || \
+        info "llama.cpp launchd registration failed — will start manually via start.sh"
+
     # Add SwiftBar to Login Items so it auto-launches at boot
     # Find SwiftBar — check common locations
     SWIFTBAR_APP=""

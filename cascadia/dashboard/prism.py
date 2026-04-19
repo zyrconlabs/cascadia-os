@@ -221,6 +221,23 @@ class PrismService:
         if provider == 'llamacpp':
             disk_config['llm']['base_url']        = 'http://127.0.0.1:8080'
             disk_config['llm']['active_model_id'] = f'qwen2.5-{model_size}'
+            # Detect and write llama_bin + models_dir so start.sh can find them
+            import os as _os2
+            install_dir = str(Path(config_path).parent)
+            llama_bin = disk_config['llm'].get('llama_bin', '')
+            if not llama_bin or not _os2.path.isfile(llama_bin):
+                for candidate in [
+                    '/opt/homebrew/bin/llama-server',
+                    '/usr/local/bin/llama-server',
+                    str(Path.home() / 'llama.cpp/build/bin/llama-server'),
+                ]:
+                    if _os2.path.isfile(candidate):
+                        llama_bin = candidate
+                        break
+            disk_config['llm']['llama_bin']    = llama_bin
+            disk_config['llm']['models_dir']   = disk_config['llm'].get('models_dir', './models')
+            disk_config['llm']['n_gpu_layers']  = disk_config['llm'].get('n_gpu_layers', 99)
+            disk_config['llm']['ctx_size']      = disk_config['llm'].get('ctx_size', 4096)
         elif provider in ('openai', 'anthropic', 'groq'):
             disk_config['llm']['api_key'] = api_key
             disk_config['llm']['base_url'] = None
