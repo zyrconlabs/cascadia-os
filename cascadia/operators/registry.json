@@ -8,7 +8,7 @@
       "category": "intelligence",
       "description": "Outbound lead research agent. Searches the web autonomously, extracts structured contact data, and writes results to CSV. Runs continuously on a configurable interval.",
       "status": "production",
-      "port": 7001,
+      "port": 8002,
       "autonomy": "autonomous",
       "sample_output": "samples/recon-houston-warehouse-leads-2026-04-18.csv"
     },
