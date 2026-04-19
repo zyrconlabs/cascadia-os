@@ -66,6 +66,7 @@ class PrismService:
             heartbeat_file=component['heartbeat_file'],
             log_dir=self.config['log_dir'],
         )
+        self.config['__config_path__'] = config_path
         # Build port map from config
         self._ports: Dict[str, int] = {
             c['name']: c['port'] for c in self.config['components']
@@ -86,10 +87,173 @@ class PrismService:
         self.runtime.register_route('POST', '/api/prism/approve',    self.approve_action)
         self.runtime.register_route('GET',  '/api/prism/models',     self.models_list)
         self.runtime.register_route('GET',  '/api/prism/operators',  self.operator_status)
+        self.runtime.register_route('GET',  '/setup',                self.serve_setup)
+        self.runtime.register_route('GET',  '/api/prism/health-check', self.full_health_check)
 
     # ------------------------------------------------------------------
     # Aggregated views
     # ------------------------------------------------------------------
+
+
+    def serve_setup(self, _) -> tuple[int, Dict[str, Any]]:
+        """Serve the post-install health check page."""
+        html = (Path(__file__).parent / "setup-complete.html").read_bytes()
+        return 200, {"__html__": html}
+
+    def full_health_check(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Full system health check for the setup-complete page.
+        Checks every component including llama.cpp, model file, and SwiftBar.
+        """
+        import os, subprocess
+        results = {}
+
+        # ── Infrastructure checks ─────────────────────────────────────────────
+        # Python version
+        import sys
+        py_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+        py_ok = sys.version_info >= (3, 11)
+        results['python'] = {
+            'label': f'Python {py_ver}',
+            'status': 'ok' if py_ok else 'error',
+            'detail': f'Version {py_ver} — {"OK" if py_ok else "3.11+ required"}',
+            'group': 'Infrastructure',
+        }
+
+        # llama.cpp binary
+        llm_cfg = self.config.get('llm', {})
+        llama_bin = llm_cfg.get('llama_bin', '')
+        llama_candidates = [
+            llama_bin,
+            '/opt/homebrew/bin/llama-server',
+            '/usr/local/bin/llama-server',
+            os.path.expanduser('~/llama.cpp/build/bin/llama-server'),
+        ]
+        llama_found = next((b for b in llama_candidates if b and os.path.isfile(b)), None)
+        results['llama_cpp'] = {
+            'label': 'llama.cpp',
+            'status': 'ok' if llama_found else 'error',
+            'detail': llama_found or 'Not found — run: bash setup-llm.sh',
+            'group': 'Infrastructure',
+        }
+
+        # AI model file
+        models_dir = llm_cfg.get('models_dir', './models')
+        if models_dir.startswith('.'):
+            models_dir = str(Path(self.config.get('__config_path__', '.')).parent / models_dir)
+        models_dir = os.path.expanduser(models_dir)
+        model_file = llm_cfg.get('model', '')
+        model_path = os.path.join(models_dir, model_file) if model_file else ''
+        model_exists = bool(model_path and os.path.isfile(model_path))
+        model_size = f"{os.path.getsize(model_path) / 1e9:.1f} GB" if model_exists else ''
+        results['ai_model'] = {
+            'label': f'AI Model ({model_file or "not configured"})',
+            'status': 'ok' if model_exists else ('warning' if not model_file else 'error'),
+            'detail': f'{model_path} — {model_size}' if model_exists else
+                      ('No model configured — run: bash setup-llm.sh' if not model_file else
+                       f'File not found: {model_path}'),
+            'group': 'Infrastructure',
+        }
+
+        # llama.cpp server responding
+        llm_base = llm_cfg.get('base_url', 'http://127.0.0.1:8080')
+        llm_ok = False
+        llm_detail = f'Not running at {llm_base}'
+        try:
+            import urllib.request
+            with urllib.request.urlopen(f'{llm_base}/health', timeout=2) as r:
+                llm_ok = r.status == 200
+                llm_detail = f'Responding at {llm_base}'
+        except Exception as e:
+            llm_provider = llm_cfg.get('provider', '')
+            if llm_provider == 'llamacpp':
+                llm_detail = f'Not running — start with: bash start.sh'
+            else:
+                llm_ok = True  # API mode — no local server needed
+                llm_detail = f'Cloud API mode ({llm_provider}) — no local server needed'
+        results['ai_server'] = {
+            'label': 'AI Inference',
+            'status': 'ok' if llm_ok else 'warning',
+            'detail': llm_detail,
+            'group': 'Infrastructure',
+        }
+
+        # SwiftBar
+        swiftbar_plugin = os.path.expanduser(
+            '~/Library/Application Support/SwiftBar/Plugins/cascadia.5s.sh'
+        )
+        swiftbar_app = (
+            os.path.isdir('/Applications/SwiftBar.app') or
+            os.path.isdir(os.path.expanduser('~/Applications/SwiftBar.app'))
+        )
+        swiftbar_linked = os.path.islink(swiftbar_plugin) or os.path.isfile(swiftbar_plugin)
+        results['swiftbar'] = {
+            'label': 'SwiftBar Menu Bar',
+            'status': 'ok' if (swiftbar_app and swiftbar_linked) else
+                      'warning' if swiftbar_app else 'warning',
+            'detail': ('Installed and linked — menu bar active' if swiftbar_app and swiftbar_linked
+                       else 'Plugin not linked — run: bash flint-link.sh' if swiftbar_app
+                       else 'Not installed — install with: brew install swiftbar'),
+            'group': 'Infrastructure',
+        }
+
+        # ── Cascadia components ───────────────────────────────────────────────
+        COMPONENTS = [
+            ('flint',     4011, 'Kernel'),
+            ('crew',      5100, 'Foundation'),
+            ('vault',     5101, 'Foundation'),
+            ('sentinel',  5102, 'Foundation'),
+            ('curtain',   5103, 'Foundation'),
+            ('beacon',    6200, 'Runtime'),
+            ('stitch',    6201, 'Runtime'),
+            ('vanguard',  6202, 'Runtime'),
+            ('handshake', 6203, 'Runtime'),
+            ('bell',      6204, 'Runtime'),
+            ('almanac',   6205, 'Runtime'),
+            ('prism',     6300, 'Dashboard'),
+        ]
+        import urllib.request as _ur
+        for name, port, group in COMPONENTS:
+            try:
+                with _ur.urlopen(f'http://127.0.0.1:{port}/health', timeout=2) as r:
+                    data = json.loads(r.read().decode())
+                    ok = data.get('ok', True)
+                    results[name] = {
+                        'label': name.upper(),
+                        'status': 'ok' if ok else 'error',
+                        'detail': f'Port {port} — ready',
+                        'group': group,
+                        'port': port,
+                    }
+            except Exception:
+                results[name] = {
+                    'label': name.upper(),
+                    'status': 'error',
+                    'detail': f'Port {port} — not responding',
+                    'group': group,
+                    'port': port,
+                }
+
+        total   = len(results)
+        ok_count = sum(1 for r in results.values() if r['status'] == 'ok')
+        warn_count = sum(1 for r in results.values() if r['status'] == 'warning')
+        all_critical_ok = all(
+            results.get(k, {}).get('status') == 'ok'
+            for k in ['python', 'flint', 'prism', 'crew', 'vault']
+        )
+
+        return 200, {
+            'checks': results,
+            'summary': {
+                'total': total,
+                'ok': ok_count,
+                'warnings': warn_count,
+                'errors': total - ok_count - warn_count,
+                'all_critical_ok': all_critical_ok,
+                'ready': all_critical_ok,
+            },
+            'generated_at': _now(),
+        }
 
     def serve_ui(self, _):
         html = (Path(__file__).parent / "prism.html").read_bytes()

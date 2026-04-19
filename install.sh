@@ -367,7 +367,8 @@ for i in $(seq 1 30); do
         break
     fi
     sleep 1
-    printf "  ${CYAN}[cascadia]${NC} Waiting... ${i}s"
+    printf "
+  ${CYAN}[cascadia]${NC} Waiting... ${i}s"
 done
 echo ""
 
@@ -454,7 +455,7 @@ if [[ "$STARTED" == "true" ]]; then
     # Open PRISM dashboard
     info "Opening PRISM dashboard in your browser..."
     sleep 1
-    [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300" 2>/dev/null || true
+    [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300/setup" 2>/dev/null || true
 
     # Refresh SwiftBar
     [[ "$(uname)" == "Darwin" ]] && open -g "swiftbar://refreshAllPlugins" 2>/dev/null || true
