@@ -580,7 +580,7 @@ input[type="file"]{display:none}
   <main class="main" id="main-panel">
     <div class="main__empty">
       <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <p>Select an operator to begin</p><span>Start with Beacon for system overview</span>
+      <p>Select an operator to begin</p><span>Choose from the left panel to start a conversation</span>
     </div>
   </main>
 </div>
@@ -632,7 +632,7 @@ const GatewayContract = {
         }
       }
       onDone(full);
-    } catch(e) { onDone('Cascadia OS is offline or loading. Check Flint menu bar.'); }
+    } catch(e) { onDone('⚠ Could not reach ' + (S.selected||'operator') + '. Check System Health tab or run: bash start.sh'); }
   },
 
   // ── Models ──
@@ -1228,7 +1228,7 @@ function renderSidebar() {
 function renderMain() {
   if (S.surface!=='ops') return;
   const panel=document.getElementById('main-panel');
-  if (!S.selected) { panel.innerHTML=`<div class="main__empty"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round"/></svg><p>Select an operator to begin</p><span>Start with Beacon for system overview</span></div>`; return; }
+  if (!S.selected) { panel.innerHTML=`<div class="main__empty"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round"/></svg><p>Select an operator to begin</p><span>Choose from the left panel to start a conversation</span></div>`; return; }
   const c=S.cells.find(x=>x.id===S.selected); if(!c)return;
   const msgs=S.messages[c.id]||[], d=SD[c.status]||'dot--offline';
   const av=c.isBeacon?'topbar__avatar--beacon':c.isWorker?'topbar__avatar--worker':'topbar__avatar--cell';
