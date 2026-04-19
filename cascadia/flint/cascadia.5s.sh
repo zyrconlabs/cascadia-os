@@ -96,17 +96,18 @@ llama_up=$(check 8080 /health)
 
 # ── Menu bar status line ──────────────────────────────────────────────────────
 if [[ "$flint_up" == "1" && $online -eq $total ]]; then
-  echo "⬡ COS ${online}/${total} | color=#00C853 font=Menlo-Bold size=12"
+  echo "⬡ Z·AI | color=#00C853 font=Menlo-Bold size=12"
 elif [[ "$flint_up" == "1" ]]; then
-  echo "◑ COS ${online}/${total} | color=#FF9500 font=Menlo-Bold size=12"
+  echo "◑ Z·AI | color=#FF9500 font=Menlo-Bold size=12"
 else
-  echo "○ COS offline | color=#FF3B30 font=Menlo-Bold size=12"
+  echo "○ Z·AI offline | color=#FF3B30 font=Menlo-Bold size=12"
 fi
 
 echo "---"
 
 # ── Header ────────────────────────────────────────────────────────────────────
-echo "Cascadia OS | font=Menlo-Bold size=13 color=#1d1d1f"
+echo "Zyrcon AI | font=Menlo-Bold size=14 color=#1d1d1f"
+echo "Cascadia OS | font=Menlo size=11 color=#888888"
 echo "---"
 
 # ── Kernel status ─────────────────────────────────────────────────────────────
