@@ -551,13 +551,12 @@ input[type="file"]{display:none}
     <div class="nav-logo"><span class="nav-logo-text">PRISM</span><div class="nav-logo-bar"></div></div>
     <button class="nav-btn nav-btn--active" onclick="switchSurface('ops')" id="nav-ops"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="nav-tooltip">Ops</span></button>
     <button class="nav-btn" onclick="switchSurface('runs')" id="nav-runs"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="nav-tooltip">Runs</span></button>
-    <button class="nav-btn" onclick="switchSurface('obs')" id="nav-obs"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span class="nav-tooltip">Observability</span></button>
     <button class="nav-btn" onclick="switchSurface('approvals')" id="nav-approvals"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span class="nav-tooltip">Approvals</span></button>
     <div class="nav-divider"></div>
     <button class="nav-btn" onclick="switchSurface('studio')" id="nav-studio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg><span class="nav-tooltip">Studio</span></button>
     <button class="nav-btn" onclick="switchSurface('admin')" id="nav-admin"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="nav-tooltip">Admin & Gateway</span></button>
     <button class="nav-btn" onclick="switchSurface('settings')" id="nav-settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span class="nav-tooltip">Settings</span></button>
-    <button class="nav-btn" onclick="switchSurface('health')" id="nav-health"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nav-tooltip">System Health</span></button>
+    <button class="nav-btn" onclick="switchSurface('health')" id="nav-health"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nav-tooltip">Health & Observability</span></button>
     <button class="nav-btn" onclick="switchSurface('terminal')" id="nav-terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span class="nav-tooltip">Terminal</span></button>
     <div class="nav-divider"></div>
     <button class="nav-btn" onclick="toggleAlmanac()" id="nav-almanac" style="margin-top:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nav-tooltip">Almanac — AI Help</span></button>
@@ -891,7 +890,7 @@ function createRun(workerId, task) {
     run.events.push({type:'run.completed',label:'Run completed',ts:Date.now(),icon:'✅'});
     Vault.saveRun(run);
     if (S.surface==='runs') renderRunsSurface();
-    if (S.surface==='obs') renderObsSurface();
+    if (S.surface==='obs'||S.surface==='health') renderHealthSurface();
     if (S.surface==='health') renderHealthSurface();
     if (S.surface==='settings') renderSettingsSurface();
   }, 8000);
@@ -1913,7 +1912,7 @@ function switchSurface(surface) {
   const panel=document.getElementById('main-panel'); if(panel) panel.style.cssText='';
   if (surface==='ops') { renderMain(); renderSidebar(); }
   else if (surface==='runs') renderRunsSurface();
-  else if (surface==='obs') renderObsSurface();
+  else if (surface==='obs') renderHealthSurface(); // merged into health
   else if (surface==='approvals') renderApprovalsSurface();
   else if (surface==='studio') renderStudioSurface();
   else if (surface==='admin') renderAdminSurface();
@@ -1962,11 +1961,66 @@ function toggleRunDetail(id) { S.selectedRun=S.selectedRun===id?null:id; renderR
 function replayRun(id) { const r=Object.values(S.runs).flat().find(x=>x.id===id); if(r)selectCell(r.workerId); }
 function exportRuns() { const data=JSON.stringify(getFilteredRuns(),null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download='prism_runs.json';a.click();URL.revokeObjectURL(url); }
 function showAddWorker() { alert('Add worker:\n\nRegister a new worker by providing a WorkerManifest:\n• id (unique)\n• name / role\n• apiBaseUrl (e.g. http://localhost:8004)\n• supportsThoughts / supportsPanel\n• metricsSchema\n\nWorker SDK and manifest editor: Studio surface → Phase 2'); }
-/* ═══ HEALTH SURFACE ═══ */
+/* ═══ HEALTH SURFACE (merged Observability + System Health) ═══ */
 async function renderHealthSurface() {
   const panel = document.getElementById('main-panel');
-  panel.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
-  panel.innerHTML = '<div class="health-summary"><span class="hs-count" id="hs-count">—</span><div class="hs-label" id="hs-label">Checking components...</div></div><div class="health-grid" id="hgrid"><div style="padding:20px;color:var(--text-dim);font-size:12px">Loading health check...</div></div>' + _healthButtons();
+  panel.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;overflow-y:auto';
+
+  // Build observability metrics from session state
+  const allRuns    = Object.values(S.runs).flat();
+  const done       = allRuns.filter(r=>r.status==='completed');
+  const failed     = allRuns.filter(r=>r.status==='failed');
+  const totalCost  = allRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0);
+  const totalTok   = allRuns.reduce((s,r)=>s+(r.tokensIn||0)+(r.tokensOut||0),0);
+  const avgDur     = done.length ? done.reduce((s,r)=>s+(r.endedAt-r.startedAt),0)/done.length/1000 : 0;
+  const pending    = S.approvals.filter(a=>a.status==='pending').length;
+  const workerStats= S.cells.filter(c=>c.isWorker).map(c=>{
+    const wRuns=S.runs[c.id]||[];
+    return {name:c.name, runs:wRuns.length, cost:wRuns.reduce((s,r)=>s+parseFloat(r.cost||0),0)};
+  });
+  const maxCost = Math.max(...workerStats.map(w=>w.cost), 0.000001);
+  const maxRuns = Math.max(...workerStats.map(w=>w.runs), 1);
+
+  panel.innerHTML = `
+    <div class="topbar">
+      <div class="topbar__left"><div style="font-size:15px;font-weight:700;color:var(--navy-800)">Health &amp; Observability</div></div>
+      <div class="topbar__right">
+        <span style="font-size:11px;font-family:var(--mono);color:var(--text-dim)" id="hs-label">Checking…</span>
+        <span style="font-size:13px;font-weight:700;color:var(--navy-800);font-family:var(--mono)" id="hs-count">—/—</span>
+        <button class="hbtn" onclick="refreshHealth()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Observability metric cards -->
+    <div class="obs-grid" style="padding:0 20px">
+      <div class="obs-card obs-card--green"><div class="obs-card__val">${done.length}</div><div class="obs-card__label">Completed</div><div class="obs-card__sub">session runs</div></div>
+      <div class="obs-card ${failed.length?'obs-card--red':''}"><div class="obs-card__val">${failed.length}</div><div class="obs-card__label">Failed</div><div class="obs-card__sub">session runs</div></div>
+      <div class="obs-card"><div class="obs-card__val">${allRuns.length}</div><div class="obs-card__label">Total runs</div><div class="obs-card__sub">session</div></div>
+      <div class="obs-card"><div class="obs-card__val">$${totalCost.toFixed(4)}</div><div class="obs-card__label">Cost</div><div class="obs-card__sub">session</div></div>
+      <div class="obs-card"><div class="obs-card__val">${(totalTok/1000).toFixed(1)}k</div><div class="obs-card__label">Tokens</div><div class="obs-card__sub">session</div></div>
+      <div class="obs-card"><div class="obs-card__val">${avgDur.toFixed(1)}s</div><div class="obs-card__label">Avg duration</div><div class="obs-card__sub">completed</div></div>
+      <div class="obs-card ${pending?'obs-card--red':'obs-card--green'}"><div class="obs-card__val">${pending}</div><div class="obs-card__label">Pending</div><div class="obs-card__sub">approvals</div></div>
+      <div class="obs-card ${S.connected?'obs-card--green':'obs-card--red'}"><div class="obs-card__val">${S.connected?'Live':'Off'}</div><div class="obs-card__label">Gateway</div><div class="obs-card__sub">:6300</div></div>
+    </div>
+
+    <!-- Worker bars -->
+    ${workerStats.length ? `
+    <div style="padding:12px 20px 0">
+      <div class="obs-chart">
+        <div class="obs-chart__title">Runs by worker</div>
+        ${workerStats.map(w=>`<div class="bar-row"><div class="bar-label">${esc(w.name)}</div><div class="bar-track"><div class="bar-fill bar-fill--green" style="width:${(w.runs/maxRuns*100).toFixed(1)}%"></div></div><div class="bar-val">${w.runs}</div></div>`).join('')}
+      </div>
+      <div class="obs-chart">
+        <div class="obs-chart__title">Cost by worker</div>
+        ${workerStats.map(w=>`<div class="bar-row"><div class="bar-label">${esc(w.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${(w.cost/maxCost*100).toFixed(1)}%"></div></div><div class="bar-val">$${w.cost.toFixed(4)}</div></div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <!-- Component health grid -->
+    <div style="padding:16px 20px 6px;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.08em">Component Status</div>
+    <div class="health-grid" id="hgrid"><div style="padding:12px 8px;color:var(--text-dim);font-size:12px">Loading…</div></div>
+    ${_healthButtons()}
+  `;
   await refreshHealth();
 }
 
@@ -2326,17 +2380,23 @@ function _renderSettingsBody(hw, llm) {
               <div class="mode-opt-title">Cloud API
                 ${hw?.recommend==='api'?'<span class="rec-chip">Recommended</span>':''}
               </div>
-              <div class="mode-opt-desc">OpenAI, Anthropic, or Groq. Fast on any hardware. Requires API key.</div>
+              <div class="mode-opt-desc">OpenAI, Anthropic, Groq, Gemini, or any OpenAI-compatible API.</div>
             </div>
           </label>
-          ${hw?.ollama_models?.length?`
           <label class="mode-opt ${_settingsMode==='ollama'?'selected':''}" onclick="selMode('ollama')">
             <input type="radio" name="aimode" ${_settingsMode==='ollama'?'checked':''}>
             <div class="mode-opt-body">
               <div class="mode-opt-title">Ollama</div>
-              <div class="mode-opt-desc">${hw.ollama_models.slice(0,3).join(', ')} — already on your machine</div>
+              <div class="mode-opt-desc">${hw?.ollama_models?.length ? hw.ollama_models.slice(0,3).join(', ') + ' — detected' : 'Run models locally via Ollama. Start with: ollama serve'}</div>
             </div>
-          </label>`:''}
+          </label>
+          <label class="mode-opt ${_settingsMode==='lmstudio'?'selected':''}" onclick="selMode('lmstudio')">
+            <input type="radio" name="aimode" ${_settingsMode==='lmstudio'?'checked':''}>
+            <div class="mode-opt-body">
+              <div class="mode-opt-title">LM Studio</div>
+              <div class="mode-opt-desc">Local OpenAI-compatible server via LM Studio. Default: localhost:1234</div>
+            </div>
+          </label>
         </div>
 
         <!-- Local: model picker -->
@@ -2359,25 +2419,40 @@ function _renderSettingsBody(hw, llm) {
 
         <!-- API: provider + key -->
         <div id="sec-api" style="${_settingsMode==='api'?'':'display:none'}">
-          <div class="prov-tabs">
-            <button class="ptab ${_settingsProv==='openai'?'on':''}" onclick="selProv('openai',this)">OpenAI</button>
-            <button class="ptab ${_settingsProv==='anthropic'?'on':''}" onclick="selProv('anthropic',this)">Anthropic</button>
-            <button class="ptab ${_settingsProv==='groq'?'on':''}" onclick="selProv('groq',this)">Groq</button>
+          <div class="prov-tabs" style="flex-wrap:wrap">
+            <button class="ptab ${_settingsProv==='openai'?'on':''}"     onclick="selProv('openai',this)">OpenAI</button>
+            <button class="ptab ${_settingsProv==='anthropic'?'on':''}"  onclick="selProv('anthropic',this)">Anthropic</button>
+            <button class="ptab ${_settingsProv==='groq'?'on':''}"       onclick="selProv('groq',this)">Groq</button>
+            <button class="ptab ${_settingsProv==='gemini'?'on':''}"     onclick="selProv('gemini',this)">Gemini</button>
+            <button class="ptab ${_settingsProv==='lmstudio'?'on':''}"   onclick="selProv('lmstudio',this)">LM Studio</button>
+            <button class="ptab ${_settingsProv==='other'?'on':''}"      onclick="selProv('other',this)">Other</button>
           </div>
           <input class="settings-input" id="api-key-inp" type="password"
             placeholder="API key" value="${llm.api_key||''}" oninput="chkApiKey()">
           <input class="settings-input" id="api-model-inp" type="text"
-            placeholder="Model" value="${llm.model||'gpt-4o-mini'}">
+            placeholder="Model (e.g. gpt-4o-mini)" value="${llm.model||'gpt-4o-mini'}">
+          <div id="api-base-row" style="${['lmstudio','other'].includes(_settingsProv)?'':'display:none'}">
+            <input class="settings-input" id="api-base-inp" type="text"
+              placeholder="Base URL (e.g. http://localhost:1234/v1)" value="${llm.api_base||''}">
+          </div>
           <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px" id="api-key-link">
             Get key: platform.openai.com/api-keys
           </div>
         </div>
 
-        <!-- Ollama -->
+        <!-- Ollama — always shown, not gated on detected models -->
         <div id="sec-ollama" style="${_settingsMode==='ollama'?'':'display:none'}">
-          <select class="settings-input" id="ollama-sel">
-            ${(hw?.ollama_models||[]).map(m=>`<option value="${m}" ${m===llm.model?'selected':''}>${m}</option>`).join('')}
-          </select>
+          ${hw?.ollama_models?.length
+            ? `<select class="settings-input" id="ollama-sel">
+                ${hw.ollama_models.map(m=>`<option value="${m}" ${m===llm.model?'selected':''}>${m}</option>`).join('')}
+               </select>
+               <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px">Models detected on your machine via Ollama</div>`
+            : `<input class="settings-input" id="ollama-sel" type="text"
+                placeholder="Model name (e.g. llama3.2, mistral)" value="${llm.model||''}">
+               <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px">
+                 No models detected. Make sure Ollama is running: <strong>ollama serve</strong>
+               </div>`
+          }
         </div>
       </div>
     </div>
@@ -2393,9 +2468,15 @@ function selMode(m) {
   _settingsMode = m;
   document.querySelectorAll('.mode-opt').forEach(el => el.classList.remove('selected'));
   event.currentTarget.classList.add('selected');
-  document.getElementById('sec-local').style.display  = m==='local'  ? '' : 'none';
-  document.getElementById('sec-api').style.display    = m==='api'    ? '' : 'none';
-  document.getElementById('sec-ollama').style.display = m==='ollama' ? '' : 'none';
+  document.getElementById('sec-local').style.display   = m==='local'    ? '' : 'none';
+  document.getElementById('sec-api').style.display     = m==='api'      ? '' : 'none';
+  document.getElementById('sec-ollama').style.display  = (m==='ollama'||m==='lmstudio') ? '' : 'none';
+  // LM Studio uses the ollama section but with text input and different label
+  if (m==='lmstudio') {
+    _settingsMode = 'lmstudio';
+    const inp = document.getElementById('ollama-sel');
+    if (inp) { inp.placeholder = 'Model name (e.g. llama-3.2-1b-instruct)'; }
+  }
 }
 
 function selModel(id) {
@@ -2404,17 +2485,28 @@ function selModel(id) {
   event.currentTarget.classList.add('selected');
 }
 
-const PROVD={openai:{m:'gpt-4o-mini',l:'platform.openai.com/api-keys'},
-             anthropic:{m:'claude-haiku-4-5-20251001',l:'console.anthropic.com/keys'},
-             groq:{m:'llama-3.3-70b-versatile',l:'console.groq.com/keys'}};
+const PROVD = {
+  openai:    { m:'gpt-4o-mini',                      l:'platform.openai.com/api-keys',    base:'' },
+  anthropic: { m:'claude-haiku-4-5-20251001',         l:'console.anthropic.com/keys',      base:'' },
+  groq:      { m:'llama-3.3-70b-versatile',           l:'console.groq.com/keys',           base:'' },
+  gemini:    { m:'gemini-2.0-flash',                  l:'aistudio.google.com/apikey',      base:'https://generativelanguage.googleapis.com/v1beta/openai' },
+  lmstudio:  { m:'local-model',                       l:'No key needed — LM Studio is local', base:'http://localhost:1234/v1' },
+  other:     { m:'',                                  l:'Check your provider\'s docs',     base:'' },
+};
+
 function selProv(p, btn) {
   _settingsProv = p;
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));
   btn.classList.add('on');
-  const mdlEl = document.getElementById('api-model-inp');
-  if (mdlEl && !mdlEl.value) mdlEl.value = PROVD[p].m;
-  const lnk = document.getElementById('api-key-link');
-  if (lnk) lnk.textContent = 'Get key: ' + PROVD[p].l;
+  const mdlEl  = document.getElementById('api-model-inp');
+  const lnkEl  = document.getElementById('api-key-link');
+  const baseRow = document.getElementById('api-base-row');
+  const baseInp = document.getElementById('api-base-inp');
+  if (mdlEl && PROVD[p].m) mdlEl.value = PROVD[p].m;
+  if (lnkEl) lnkEl.textContent = PROVD[p].l;
+  const showBase = ['lmstudio','other','gemini'].includes(p);
+  if (baseRow) baseRow.style.display = showBase ? '' : 'none';
+  if (baseInp && PROVD[p].base && !baseInp.value) baseInp.value = PROVD[p].base;
 }
 function chkApiKey() {}
 
@@ -2423,8 +2515,10 @@ async function saveSettings() {
   const status = document.getElementById('save-status');
   btn.disabled = true; btn.textContent = 'Saving...';
 
-  let payload = { provider: _settingsMode === 'api' ? _settingsProv
-                            : _settingsMode === 'ollama' ? 'ollama' : 'llamacpp' };
+  let payload = { provider: _settingsMode === 'api'      ? _settingsProv
+                            : _settingsMode === 'ollama'   ? 'ollama'
+                            : _settingsMode === 'lmstudio' ? 'lmstudio'
+                            : 'llamacpp' };
 
   if (_settingsMode === 'local') {
     const MFILES = {'3b':'qwen2.5-3b-instruct-q4_k_m.gguf',
@@ -2433,10 +2527,15 @@ async function saveSettings() {
     payload.model = MFILES[_settingsModel] || MFILES['3b'];
     payload.model_size = _settingsModel;
   } else if (_settingsMode === 'api') {
-    payload.model   = document.getElementById('api-model-inp')?.value || PROVD[_settingsProv].m;
-    payload.api_key = document.getElementById('api-key-inp')?.value || '';
+    payload.model    = document.getElementById('api-model-inp')?.value || PROVD[_settingsProv]?.m || '';
+    payload.api_key  = document.getElementById('api-key-inp')?.value || '';
+    const baseVal    = document.getElementById('api-base-inp')?.value || '';
+    if (baseVal) payload.api_base = baseVal;
   } else if (_settingsMode === 'ollama') {
     payload.model = document.getElementById('ollama-sel')?.value || '';
+  } else if (_settingsMode === 'lmstudio') {
+    payload.model    = document.getElementById('ollama-sel')?.value || 'local-model';
+    payload.api_base = 'http://localhost:1234/v1';
   }
 
   try {
