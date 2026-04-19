@@ -127,27 +127,11 @@ else
     info "config.json already exists — skipping."
 fi
 
-# ── 7. First-time setup ───────────────────────────────────────────────────────
-info "Running first-time setup (cascadia.installer.once)..."
-"$VENV_DIR/bin/python" -m cascadia.installer.once --dir "$INSTALL_DIR"
+# ── 7. Silent first-time setup (dirs, db, config) ────────────────────────────
+# AI mode is chosen in PRISM Settings surface — no separate browser wizard needed
+info "Running silent setup (directories, database, config defaults)..."
+"$VENV_DIR/bin/python" -m cascadia.installer.once --dir "$INSTALL_DIR" --config config.json --no-browser
 success "Setup complete."
-
-# ── 8. Browser setup wizard ──────────────────────────────────────────────────
-info "Opening AI setup wizard in your browser..."
-echo ""
-echo "  ┌──────────────────────────────────────────────┐"
-echo "  │  A browser window will open for setup.       │"
-echo "  │  Complete the setup there, then come back.   │"
-echo "  │                                              │"
-echo "  │  If browser does not open:                   │"
-echo "  │  → http://127.0.0.1:4010                     │"
-echo "  └──────────────────────────────────────────────┘"
-echo ""
-
-# Run the setup wizard — blocks until user completes it
-"$VENV_DIR/bin/python" -m cascadia.installer.once     --dir "$INSTALL_DIR"     --config config.json
-
-success "Setup wizard complete"
 
 # ── 9. Launcher script ───────────────────────────────────────────────────────
 LAUNCHER="$HOME/.local/bin/cascadia"
@@ -159,12 +143,10 @@ exec "$VENV_DIR/bin/python" -m cascadia.kernel.watchdog --config "$INSTALL_DIR/c
 EOF
 chmod +x "$LAUNCHER"
 
-# ── 9. Open PRISM after start hint ──────────────────────────────────────────
-info "Starting Cascadia OS..."
+# ── 9. Start full stack via start.sh (llama.cpp + Cascadia OS) ──────────────
+info "Starting Cascadia OS full stack..."
 source "$VENV_DIR/bin/activate"
-nohup "$VENV_DIR/bin/python" -m cascadia.kernel.watchdog --config "$INSTALL_DIR/config.json" > "$INSTALL_DIR/data/logs/watchdog.log" 2>&1 &
-sleep 4
-if [[ "$(uname)" == "Darwin" ]]; then open "http://127.0.0.1:6300" 2>/dev/null || true; fi
+cd "$INSTALL_DIR" && bash start.sh
 
 
 # ── 11. Flint menu bar controller ─────────────────────────────────────────────
@@ -290,18 +272,18 @@ fi
 
 # ── 13. Start Cascadia and verify ────────────────────────────────────────────
 echo ""
-info "Starting Cascadia OS..."
+info "Starting Cascadia OS full stack (llama.cpp + all services)..."
 
 # Kill any existing instance cleanly
 pkill -f "cascadia.kernel" 2>/dev/null || true
+pkill -f "llama-server" 2>/dev/null || true
 sleep 2
 
-# Start watchdog using venv python
+# Use start.sh — it handles llama.cpp → Cascadia OS in correct order
 PYTHON_BIN="$VENV_DIR/bin/python"
 [[ ! -f "$PYTHON_BIN" ]] && PYTHON_BIN="python3"
-
 mkdir -p "$INSTALL_DIR/data/logs"
-nohup "$PYTHON_BIN" -m cascadia.kernel.watchdog     --config "$INSTALL_DIR/config.json"     > "$INSTALL_DIR/data/logs/flint.log" 2>&1 &
+cd "$INSTALL_DIR" && bash start.sh
 
 # ── Wait for FLINT kernel to respond (up to 30s) ─────────────────────────────
 info "Waiting for Cascadia kernel to start..."

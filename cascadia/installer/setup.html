@@ -69,7 +69,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);
 .mm-desc{font-size:.75rem;color:var(--ink3);font-weight:300;margin-top:1px}
 .mm-sz{font-size:.75rem;font-weight:500;color:var(--ink2);text-align:right}
 .mm-ram{font-size:.68rem;color:var(--ink4);margin-top:1px;text-align:right}
-.prov-tabs{display:flex;gap:6px;margin-bottom:14px}
+.prov-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .ptab{padding:7px 14px;border-radius:8px;border:1px solid var(--border2);font-size:.8rem;
   cursor:pointer;background:var(--white);color:var(--ink3);transition:all .2s;
   font-family:'DM Sans',sans-serif}
@@ -166,15 +166,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);
   <div id="s-api" style="display:none">
     <h1 class="headline">Connect your<br><em>Cloud API.</em></h1>
     <p class="sub">Fast on any hardware. Requires an API key.</p>
-    <div class="prov-tabs">
+    <div class="prov-tabs" style="flex-wrap:wrap;gap:6px">
       <button class="ptab on" onclick="setP('openai',this)">OpenAI</button>
       <button class="ptab" onclick="setP('anthropic',this)">Anthropic</button>
       <button class="ptab" onclick="setP('groq',this)">Groq</button>
+      <button class="ptab" onclick="setP('gemini',this)">Gemini</button>
+      <button class="ptab" onclick="setP('lmstudio',this)">LM Studio</button>
+      <button class="ptab" onclick="setP('other',this)">Other</button>
     </div>
     <div class="fg"><label class="fl">API Key</label>
       <input class="fi" id="apikey" type="password" placeholder="Paste your API key" oninput="chkApi()"></div>
     <div class="fg"><label class="fl">Model</label>
       <input class="fi" id="apimdl" value="gpt-4o-mini"></div>
+    <div class="fg" id="baserow" style="display:none"><label class="fl">Base URL</label>
+      <input class="fi" id="apibase" placeholder="e.g. http://localhost:1234/v1"></div>
     <p style="font-size:.73rem;color:var(--ink3);margin-bottom:18px">
       Get your key: <span id="keylink" style="color:var(--blue)">platform.openai.com/api-keys</span></p>
     <button class="btn" id="btnapiok" disabled onclick="applyApi()">Save & Continue →</button>
@@ -222,9 +227,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);
 
 <script>
 const S={mode:null,msz:null,hw:null,prov:'openai',omdl:null,evtCount:0,timer:null};
-const PROVD={openai:{m:'gpt-4o-mini',l:'platform.openai.com/api-keys'},
-             anthropic:{m:'claude-haiku-4-5-20251001',l:'console.anthropic.com/keys'},
-             groq:{m:'llama-3.3-70b-versatile',l:'console.groq.com/keys'}};
+const PROVD={
+  openai:   {m:'gpt-4o-mini',                    l:'platform.openai.com/api-keys',          base:'',                              nokey:false},
+  anthropic:{m:'claude-haiku-4-5-20251001',       l:'console.anthropic.com/keys',            base:'',                              nokey:false},
+  groq:     {m:'llama-3.3-70b-versatile',         l:'console.groq.com/keys',                 base:'',                              nokey:false},
+  gemini:   {m:'gemini-2.0-flash',                l:'aistudio.google.com/apikey',            base:'https://generativelanguage.googleapis.com/v1beta/openai', nokey:false},
+  lmstudio: {m:'local-model',                     l:'No key needed — LM Studio is local',    base:'http://localhost:1234/v1',       nokey:true},
+  other:    {m:'',                                l:'Check your provider docs for API key',  base:'',                              nokey:false},
+};
 
 function sp(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');}
@@ -328,16 +338,36 @@ function setP(p,btn){
   S.prov=p;
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));
   btn.classList.add('on');
-  document.getElementById('apimdl').value=PROVD[p].m;
-  document.getElementById('keylink').textContent=PROVD[p].l;
+  const pd=PROVD[p];
+  if(pd.m) document.getElementById('apimdl').value=pd.m;
+  document.getElementById('keylink').textContent=pd.l;
+  const baseRow=document.getElementById('baserow');
+  const baseInp=document.getElementById('apibase');
+  if(pd.base||p==='other'){
+    baseRow.style.display='';
+    if(pd.base&&!baseInp.value) baseInp.value=pd.base;
+  } else {
+    baseRow.style.display='none';
+  }
+  // LM Studio doesn't need a key — pre-fill placeholder so button enables
+  const keyInp=document.getElementById('apikey');
+  if(pd.nokey){ keyInp.placeholder='No API key needed'; } else { keyInp.placeholder='Paste your API key'; }
   chkApi();
 }
-function chkApi(){document.getElementById('btnapiok').disabled=!document.getElementById('apikey').value.trim();}
+function chkApi(){
+  const pd=PROVD[S.prov]||{};
+  const hasKey=!!document.getElementById('apikey').value.trim();
+  document.getElementById('btnapiok').disabled=!(hasKey||pd.nokey);
+}
 function applyApi(){
   const k=document.getElementById('apikey').value.trim();
   const m=document.getElementById('apimdl').value.trim();
+  const base=document.getElementById('apibase')?.value.trim()||PROVD[S.prov]?.base||'';
+  const llm={provider:S.prov,model:m,configured:true};
+  if(k) llm.api_key=k;
+  if(base) llm.base_url=base;
   fetch('/api/setup/skip',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({llm:{provider:S.prov,api_key:k,model:m,configured:true}})});
+    body:JSON.stringify({llm})});
   gop4();
 }
 
