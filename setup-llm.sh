@@ -396,6 +396,34 @@ PYEOF
     fi
     echo ""
 
+    # ── Auto-start llama.cpp ───────────────────────────────────────────────────
+    info "Starting AI inference server..."
+    pkill -f "llama-server" 2>/dev/null || true
+    sleep 1
+    "$LLAMA_BIN" \
+        --model "$MODEL_PATH" \
+        --host 127.0.0.1 --port 8080 \
+        --ctx-size 4096 \
+        --n-gpu-layers "$N_GPU_LAYERS" \
+        >> "$INSTALL_DIR/data/logs/llamacpp.log" 2>&1 &
+
+    # Wait up to 20s for it to be ready
+    LLM_READY=false
+    for i in $(seq 1 20); do
+        if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
+            LLM_READY=true
+            break
+        fi
+        sleep 1
+    done
+
+    if [[ "$LLM_READY" == "true" ]]; then
+        success "AI inference server running on http://127.0.0.1:8080"
+    else
+        warn "AI server starting in background — may take a few more seconds"
+        warn "Check: curl http://127.0.0.1:8080/health"
+    fi
+
 elif [[ "$MODE_CHOICE" == "2" ]]; then
     # ── CLOUD API MODE ────────────────────────────────────────────────────────
     echo ""
@@ -467,5 +495,5 @@ else
     exit 0
 fi
 
-echo "  Start Cascadia: bash start.sh"
+echo "  Start Cascadia: bash start.sh (if not already running)"
 echo ""

@@ -235,7 +235,7 @@ class PrismService:
         except Exception as e:
             return 500, {'error': f'Could not write config: {e}'}
 
-        # If local provider — run setup-llm.sh in background
+        # If local provider — run setup-llm.sh then auto-start llama.cpp
         needs_setup = provider == 'llamacpp'
         if needs_setup:
             install_dir = str(Path(config_path).parent)
@@ -245,6 +245,32 @@ class PrismService:
                     cwd=install_dir,
                     capture_output=True,
                 )
+                # After download completes, start llama.cpp automatically
+                try:
+                    import json as _json
+                    with open(config_path) as _f:
+                        _cfg = _json.load(_f)
+                    _llm = _cfg.get('llm', {})
+                    _bin  = _llm.get('llama_bin', '')
+                    _model = _llm.get('model', '')
+                    _models_dir = _llm.get('models_dir', f'{install_dir}/models')
+                    _gpu = _llm.get('n_gpu_layers', 99)
+                    _model_path = f'{_models_dir}/{_model}'
+                    if _bin and _os.path.isfile(_bin) and _os.path.isfile(_model_path):
+                        # Kill any stale instance first
+                        _sp.run(['pkill', '-f', 'llama-server'], capture_output=True)
+                        import time as _time; _time.sleep(1)
+                        _sp.Popen(
+                            [_bin, '--model', _model_path,
+                             '--host', '127.0.0.1', '--port', '8080',
+                             '--ctx-size', '4096',
+                             '--n-gpu-layers', str(_gpu)],
+                            cwd=install_dir,
+                            stdout=open(f'{install_dir}/data/logs/llamacpp.log', 'a'),
+                            stderr=_sp.STDOUT,
+                        )
+                except Exception as _e:
+                    pass  # best-effort — user can run start.sh manually
             _th.Thread(target=_run_setup, daemon=True).start()
 
         self.runtime.logger.info(
@@ -775,6 +801,8 @@ class PrismService:
             'active_model_id': active_id or (models[0]['id'] if models else ''),
             'llm_base_url': llm.get('base_url', 'http://127.0.0.1:8080'),
             'llm_provider': llm.get('provider', 'llamacpp'),
+            # FLINT proxy is always available for chat — normalises model names
+            'flint_proxy_url': f'http://127.0.0.1:{self._flint_port}',
             'count': len(models),
             'generated_at': _now(),
         }

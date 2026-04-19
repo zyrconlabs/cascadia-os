@@ -138,15 +138,24 @@ LAUNCHER="$HOME/.local/bin/cascadia"
 mkdir -p "$HOME/.local/bin"
 cat > "$LAUNCHER" <<EOF
 #!/usr/bin/env bash
-source "$VENV_DIR/bin/activate"
-exec "$VENV_DIR/bin/python" -m cascadia.kernel.watchdog --config "$INSTALL_DIR/config.json" "\$@"
+cd "$INSTALL_DIR"
+exec bash "$INSTALL_DIR/start.sh"
 EOF
 chmod +x "$LAUNCHER"
 
-# ── 9. Start full stack via start.sh (llama.cpp + Cascadia OS) ──────────────
-info "Starting Cascadia OS full stack..."
+# ── 10. Create startup wrapper (used by launchd + manual runs) ────────────────
+# This wrapper ensures llama.cpp + Cascadia start in the right order at boot
+STARTUP_WRAPPER="$INSTALL_DIR/run.sh"
+cat > "$STARTUP_WRAPPER" <<EOF
+#!/usr/bin/env bash
+# Cascadia OS startup wrapper — used by launchd and manual runs
+# Starts llama.cpp then Cascadia OS watchdog in the correct order
+cd "$INSTALL_DIR"
 source "$VENV_DIR/bin/activate"
-cd "$INSTALL_DIR" && bash start.sh
+exec bash "$INSTALL_DIR/start.sh"
+EOF
+chmod +x "$STARTUP_WRAPPER"
+success "Startup wrapper created: run.sh" 
 
 
 # ── 11. Flint menu bar controller ─────────────────────────────────────────────
@@ -214,11 +223,8 @@ if [[ "$(uname)" == "Darwin" ]]; then
     <string>com.zyrconlabs.cascadia</string>
     <key>ProgramArguments</key>
     <array>
-        <string>${PYTHON_BIN}</string>
-        <string>-m</string>
-        <string>cascadia.kernel.watchdog</string>
-        <string>--config</string>
-        <string>${INSTALL_DIR}/config.json</string>
+        <string>/bin/bash</string>
+        <string>${INSTALL_DIR}/run.sh</string>
     </array>
     <key>WorkingDirectory</key>
     <string>${INSTALL_DIR}</string>
@@ -227,9 +233,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>${INSTALL_DIR}/data/logs/flint.log</string>
+    <string>${INSTALL_DIR}/data/logs/startup.log</string>
     <key>StandardErrorPath</key>
-    <string>${INSTALL_DIR}/data/logs/flint.log</string>
+    <string>${INSTALL_DIR}/data/logs/startup.log</string>
 </dict>
 </plist>
 PLIST
@@ -274,157 +280,39 @@ fi
 echo ""
 info "Starting Cascadia OS full stack (llama.cpp + all services)..."
 
-# Kill any existing instance cleanly
+# Kill any stale instances
 pkill -f "cascadia.kernel" 2>/dev/null || true
 pkill -f "llama-server" 2>/dev/null || true
 sleep 2
 
-# Use start.sh — it handles llama.cpp → Cascadia OS in correct order
-PYTHON_BIN="$VENV_DIR/bin/python"
-[[ ! -f "$PYTHON_BIN" ]] && PYTHON_BIN="python3"
+# start.sh handles llama.cpp → Cascadia OS in correct order
 mkdir -p "$INSTALL_DIR/data/logs"
 cd "$INSTALL_DIR" && bash start.sh
 
-# ── Wait for FLINT kernel to respond (up to 30s) ─────────────────────────────
-info "Waiting for Cascadia kernel to start..."
-STARTED=false
-for i in $(seq 1 30); do
-    if curl -sf http://127.0.0.1:4011/health > /dev/null 2>&1; then
-        STARTED=true
-        break
-    fi
-    sleep 1
-    printf "
-  ${CYAN}[cascadia]${NC} Waiting... ${i}s"
-done
+
+# ── Open dashboard on first install ──────────────────────────────────────────
 echo ""
-
-if [[ "$STARTED" == "true" ]]; then
-    # ── Wait for all components to become ready (up to 20 more seconds) ───────
-    info "Checking all components..."
-    echo ""
-    sleep 3  # give tier 2 & 3 time to boot after tier 1
-
-    # Component definitions: name|port|tier_label
-    COMPONENTS=(
-        "flint|4011|Kernel"
-        "crew|5100|Foundation"
-        "vault|5101|Foundation"
-        "sentinel|5102|Foundation"
-        "curtain|5103|Foundation"
-        "beacon|6200|Runtime"
-        "stitch|6201|Runtime"
-        "vanguard|6202|Runtime"
-        "handshake|6203|Runtime"
-        "bell|6204|Runtime"
-        "almanac|6205|Runtime"
-        "prism|6300|Dashboard"
-    )
-
-    ALL_HEALTHY=true
-    HEALTHY_COUNT=0
-    TOTAL_COUNT=${#COMPONENTS[@]}
-    CURRENT_TIER=""
-
-    for COMP_DEF in "${COMPONENTS[@]}"; do
-        NAME="${COMP_DEF%%|*}"
-        REST="${COMP_DEF#*|}"
-        PORT="${REST%%|*}"
-        TIER="${REST##*|}"
-
-        # Print tier header when it changes
-        if [[ "$TIER" != "$CURRENT_TIER" ]]; then
-            CURRENT_TIER="$TIER"
-            echo "  ${TIER}"
-        fi
-
-        # Check health with 5s timeout
-        COMP_OK=false
-        for attempt in 1 2 3 4 5; do
-            if curl -sf "http://127.0.0.1:${PORT}/health" > /dev/null 2>&1; then
-                COMP_OK=true
-                break
-            fi
-            sleep 1
-        done
-
-        if [[ "$COMP_OK" == "true" ]]; then
-            printf "  ${GREEN}✓${NC} %-14s :%-5s ready\n" "$NAME" "$PORT"
-            HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
-        else
-            printf "  ${RED}✗${NC} %-14s :%-5s not responding\n" "$NAME" "$PORT"
-            ALL_HEALTHY=false
-        fi
-    done
-
-    echo ""
-
-    # ── Final status report ───────────────────────────────────────────────────
-    if [[ "$ALL_HEALTHY" == "true" ]]; then
-        success "════════════════════════════════════════════"
-        success " Cascadia OS v0.43 — all systems go"
-        success " ${HEALTHY_COUNT}/${TOTAL_COUNT} components healthy"
-        success "════════════════════════════════════════════"
-    else
-        warn "════════════════════════════════════════════"
-        warn " ${HEALTHY_COUNT}/${TOTAL_COUNT} components healthy"
-        warn " Some components did not start — check logs:"
-        warn " tail -50 $INSTALL_DIR/data/logs/flint.log"
-        warn "════════════════════════════════════════════"
-    fi
-
-    echo ""
-    echo "  Dashboard: http://localhost:6300"
-    echo "  Config:    $INSTALL_DIR/config.json"
-    echo "  Logs:      $INSTALL_DIR/data/logs/"
-    echo ""
-
-    # Open PRISM dashboard
-    info "Opening PRISM dashboard in your browser..."
-    sleep 1
-    # First install — open Settings surface so user can choose AI mode
-    if [[ ! -f "$INSTALL_DIR/.setup_complete" ]]; then
-        [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300/#settings" 2>/dev/null || true
-        touch "$INSTALL_DIR/.setup_complete"
-    else
-        [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300/#health" 2>/dev/null || true
-    fi
-
-    # Refresh SwiftBar
-    [[ "$(uname)" == "Darwin" ]] && open -g "swiftbar://refreshAllPlugins" 2>/dev/null || true
-
-    echo ""
-    echo "  ╔══════════════════════════════════════════════╗"
-    echo "  ║  You are up and running.                     ║"
-    echo "  ║                                              ║"
-    echo "  ║  1. PRISM dashboard opened in your browser   ║"
-    echo "  ║  2. SwiftBar menu bar shows system status    ║"
-    echo "  ║  3. Run the demo:  bash demo.sh              ║"
-    echo "  ║  4. Auto-starts at every boot                ║"
-    echo "  ╚══════════════════════════════════════════════╝"
-    echo ""
-
+if [[ ! -f "$INSTALL_DIR/.setup_complete" ]]; then
+    info "Opening PRISM dashboard — choose your AI mode in Settings..."
+    [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300/#settings" 2>/dev/null || true
+    touch "$INSTALL_DIR/.setup_complete"
 else
-    # ── Kernel never responded ────────────────────────────────────────────────
-    echo ""
-    echo "  ${RED}Kernel${NC}"
-    printf "  ${RED}✗${NC} %-14s :%-5s not responding\n" "flint" "4011"
-    echo ""
-    warn "Cascadia did not start within 30 seconds."
-    echo ""
-    echo "  Common causes:"
-    echo "  • Port 4011 already in use:  lsof -i :4011"
-    echo "  • Python package missing:    pip3 install -e . --break-system-packages"
-    echo "  • Config error:              cat $INSTALL_DIR/config.json"
-    echo ""
-    echo "  Check full log:"
-    echo "    tail -50 $INSTALL_DIR/data/logs/flint.log"
-    echo ""
-    echo "  Start manually:"
-    echo "    cd $INSTALL_DIR && python3 -m cascadia.kernel.watchdog --config config.json &"
-    echo ""
-    warn "Installation complete but Cascadia needs a manual start."
+    info "Opening PRISM dashboard..."
+    [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300" 2>/dev/null || true
 fi
+
+[[ "$(uname)" == "Darwin" ]] && open -g "swiftbar://refreshAllPlugins" 2>/dev/null || true
+
+echo ""
+echo "  ╔══════════════════════════════════════════════╗"
+echo "  ║  Cascadia OS is running.                     ║"
+echo "  ║                                              ║"
+echo "  ║  → PRISM dashboard opened in your browser    ║"
+echo "  ║  → Go to Settings to choose your AI mode     ║"
+echo "  ║  → SwiftBar shows live system status         ║"
+echo "  ║  → Starts automatically at every boot        ║"
+echo "  ╚══════════════════════════════════════════════╝"
+echo "" 
 
 # ── PATH setup ────────────────────────────────────────────────────────────────
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
