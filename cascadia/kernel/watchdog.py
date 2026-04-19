@@ -38,7 +38,18 @@ class Watchdog:
 
     def run(self) -> None:
         self.logger.info('Watchdog active - Cascadia OS v' + VERSION + '')
+        # Branded terminal banner
+        print('')
+        print('  \033[31m╔══════════════════════════════════════╗\033[0m')
+        print('  \033[31m║\033[0m  \033[31;1mZyrcon\033[0m  ·  \033[35mCascadia OS\033[0m  \033[31m║\033[0m')
+        print('  \033[31m║\033[0m     AI Work Platform v' + VERSION + '       \033[31m║\033[0m')
+        print('  \033[31m╚══════════════════════════════════════╝\033[0m')
+        print('')
         self.start_flint()
+        # Startup grace: give FLINT time to boot before first stale check
+        startup_grace = self.config['flint'].get('heartbeat_stale_after_seconds', 15) * 3
+        self.logger.info('Watchdog giving FLINT %ss startup grace', startup_grace)
+        time.sleep(startup_grace)
         while True:
             time.sleep(5)
             if self.proc and self.proc.poll() is not None:
