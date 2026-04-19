@@ -2055,8 +2055,8 @@ function _renderSettingsBody(hw, llm) {
             ${MODELS.map(m=>{
               const dim=(hw?.ram_gb||0)>0&&(hw?.ram_gb||0)<m.r;
               const isRec=m.id===rec;
-              return `<label class="model-opt ${_settingsModel===m.id?'selected':''} ${dim?'disabled':''}"
-                onclick="${dim?'':'selModel(''+m.id+'')'}">
+              return `<label class="model-opt ${_settingsModel===m.id?'selected':''} ${dim?'disabled':''}" data-mid="${m.id}"
+                onclick="${dim?'void(0)':'selModel(this.dataset.mid)'}">
                 <input type="radio" name="mdl" ${_settingsModel===m.id?'checked':''}${dim?' disabled':''}>
                 <div><div class="model-opt-name">${m.n}${isRec?'<span class="rec-chip">Rec</span>':''}</div>
                   <div class="model-opt-desc">${m.d}${dim?' — needs '+m.r+'GB RAM':''}</div></div>
