@@ -410,8 +410,10 @@ input[type="file"]{display:none}
     <div class="nav-divider"></div>
     <button class="nav-btn" onclick="switchSurface('studio')" id="nav-studio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg><span class="nav-tooltip">Studio</span></button>
     <button class="nav-btn" onclick="switchSurface('admin')" id="nav-admin"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="nav-tooltip">Admin & Gateway</span></button>
+    <button class="nav-btn" onclick="switchSurface('settings')" id="nav-settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span class="nav-tooltip">Settings</span></button>
+    <button class="nav-btn" onclick="switchSurface('health')" id="nav-health"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nav-tooltip">System Health</span></button>
     <div class="nav-divider"></div>
-    <button class="nav-btn" onclick="showHelp()" style="margin-top:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nav-tooltip">Help</span></button>
+    <button class="nav-btn" onclick="toggleAlmanac()" id="nav-almanac" style="margin-top:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nav-tooltip">Almanac — AI Help</span></button>
   </nav>
 
   <aside class="sidebar" id="sidebar">
@@ -743,6 +745,8 @@ function createRun(workerId, task) {
     Vault.saveRun(run);
     if (S.surface==='runs') renderRunsSurface();
     if (S.surface==='obs') renderObsSurface();
+    if (S.surface==='health') renderHealthSurface();
+    if (S.surface==='settings') renderSettingsSurface();
   }, 8000);
   return run;
 }
@@ -1764,6 +1768,8 @@ function switchSurface(surface) {
   else if (surface==='approvals') renderApprovalsSurface();
   else if (surface==='studio') renderStudioSurface();
   else if (surface==='admin') renderAdminSurface();
+  else if (surface==='settings') renderSettingsSurface();
+  else if (surface==='health') renderHealthSurface();
 }
 function switchToRuns(id) { S.selected=id; S.surface='runs'; switchSurface('runs'); }
 
@@ -1806,7 +1812,398 @@ function toggleRunDetail(id) { S.selectedRun=S.selectedRun===id?null:id; renderR
 function replayRun(id) { const r=Object.values(S.runs).flat().find(x=>x.id===id); if(r)selectCell(r.workerId); }
 function exportRuns() { const data=JSON.stringify(getFilteredRuns(),null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download='prism_runs.json';a.click();URL.revokeObjectURL(url); }
 function showAddWorker() { alert('Add worker:\n\nRegister a new worker by providing a WorkerManifest:\n• id (unique)\n• name / role\n• apiBaseUrl (e.g. http://localhost:8004)\n• supportsThoughts / supportsPanel\n• metricsSchema\n\nWorker SDK and manifest editor: Studio surface → Phase 2'); }
-function showHelp() { alert('PRISM — Cascadia OS\n\n• Ops: Chat, thought stream, worker panels\n• Runs: Full run history, events, replay, filters\n• Observability: Real vault metrics + gateway\n• Approvals: Review and resolve pending actions\n• Studio: Drag-and-drop flow builder with node test\n• Admin: Users, API keys (persisted), vault, audit log, Gateway Contract check\n\nGateway Contract v1 at localhost:7001'); }
+function showHelp() {} // replaced by Almanac
+
+/* ── SETTINGS SURFACE ── */
+.settings-wrap{max-width:640px;margin:0 auto;padding:24px 20px}
+.settings-section{background:var(--white);border:1px solid var(--gray-100);
+  border-radius:14px;overflow:hidden;margin-bottom:16px}
+.settings-section-head{padding:14px 20px;border-bottom:1px solid var(--gray-100);
+  font-size:12px;font-weight:700;color:var(--navy-800);
+  display:flex;align-items:center;gap:8px}
+.settings-section-body{padding:18px 20px}
+.hw-detect-row{display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--gray-100)}
+.hw-detect-row:last-child{border-bottom:none}
+.hw-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.hw-dot-ok{background:#1d9e75}
+.hw-dot-warn{background:#ba7517}
+.hw-label{font-size:12px;font-weight:500;color:var(--navy-800);flex:1}
+.hw-value{font-size:11px;color:var(--text-dim);font-family:var(--mono)}
+.mode-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.mode-opt{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;
+  background:var(--surface);border:1.5px solid transparent;border-radius:10px;
+  cursor:pointer;transition:all .15s}
+.mode-opt:hover{background:var(--surface2)}
+.mode-opt.selected{border-color:var(--prism-a);background:#f0f9ff}
+.mode-opt input[type=radio]{margin-top:2px;accent-color:var(--prism-a)}
+.mode-opt-body{}
+.mode-opt-title{font-size:13px;font-weight:600;color:var(--navy-800);margin-bottom:2px}
+.mode-opt-desc{font-size:11px;color:var(--text-dim);font-weight:300;line-height:1.5}
+.rec-chip{font-size:9px;font-weight:600;padding:1px 6px;border-radius:99px;
+  background:#e1f5ee;color:#085041;margin-left:6px;vertical-align:middle}
+.model-options{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.model-opt{display:grid;grid-template-columns:auto 1fr auto;gap:10px;
+  align-items:center;padding:11px 14px;background:var(--surface);
+  border:1.5px solid transparent;border-radius:10px;cursor:pointer;transition:all .15s}
+.model-opt:hover{background:var(--surface2)}
+.model-opt.selected{border-color:var(--prism-b);background:#faf5ff}
+.model-opt.disabled{opacity:.35;cursor:not-allowed}
+.model-opt input[type=radio]{accent-color:var(--prism-b)}
+.model-opt-name{font-size:12px;font-weight:600;color:var(--navy-800)}
+.model-opt-desc{font-size:11px;color:var(--text-dim);margin-top:1px}
+.model-opt-size{font-size:11px;font-weight:500;color:var(--navy-600);
+  font-family:var(--mono);text-align:right}
+.model-opt-ram{font-size:10px;color:var(--text-dim);text-align:right;margin-top:1px}
+.settings-input{width:100%;height:36px;border:1px solid var(--gray-200);border-radius:8px;
+  padding:0 12px;font-size:12px;font-family:var(--font);color:var(--navy-900);
+  background:var(--white);outline:none;transition:border-color .15s;margin-bottom:10px}
+.settings-input:focus{border-color:var(--prism-a)}
+.settings-save-btn{width:100%;height:42px;border-radius:10px;
+  background:linear-gradient(135deg,var(--prism-a),var(--prism-b));
+  color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;
+  transition:opacity .2s;font-family:var(--font)}
+.settings-save-btn:hover{opacity:.88}
+.settings-save-btn:disabled{opacity:.4;cursor:not-allowed}
+.prov-tabs{display:flex;gap:6px;margin-bottom:12px}
+.ptab{padding:6px 14px;border-radius:8px;border:1px solid var(--gray-200);
+  font-size:11px;font-weight:500;cursor:pointer;background:var(--white);
+  color:var(--text-dim);transition:all .15s;font-family:var(--font)}
+.ptab.on{background:var(--prism-a);color:#fff;border-color:var(--prism-a)}
+/* ── HEALTH SURFACE ── */
+async function renderHealthSurface() {
+  const panel = document.getElementById('main-panel');
+  panel.innerHTML = '<div class="health-summary"><span class="hs-count" id="hs-count">—</span><div class="hs-label" id="hs-label">Checking components...</div></div><div class="health-grid" id="hgrid"><div style="padding:20px;color:var(--text-dim);font-size:12px">Loading health check...</div></div>' + _healthButtons();
+  await refreshHealth();
+}
+
+async function refreshHealth() {
+  try {
+    const d = await prismFetch('/api/prism/health-check');
+    if (!d) return;
+    const grid = document.getElementById('hgrid');
+    const countEl = document.getElementById('hs-count');
+    const labelEl = document.getElementById('hs-label');
+    if (!grid) return;
+
+    const okCount = Object.values(d.checks).filter(c=>c.status==='ok').length;
+    const total = Object.values(d.checks).length;
+    if (countEl) countEl.textContent = okCount+'/'+total;
+    if (labelEl) labelEl.textContent = d.summary.ready ? 'All systems healthy' : okCount+'/'+total+' components ready';
+
+    const groups = {};
+    Object.values(d.checks).forEach(c => {
+      if (!groups[c.group]) groups[c.group] = [];
+      groups[c.group].push(c);
+    });
+
+    const icoOk = `<div class="hc-ico hc-ok"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+    const icoWarn = `<div class="hc-ico hc-warn"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/></svg></div>`;
+    const icoErr = `<div class="hc-ico hc-err"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>`;
+    const icoSpin = `<div class="hc-ico hc-spin"></div>`;
+
+    grid.innerHTML = Object.entries(groups).map(([grp, checks]) => `
+      <div class="hc-group">${grp}</div>
+      ${checks.map(c => {
+        const ico = c.status==='ok'?icoOk:c.status==='warning'?icoWarn:c.status==='error'?icoErr:icoSpin;
+        const badge = `<span class="hc-badge hcb-${c.status==='ok'?'ok':c.status==='warning'?'warn':c.status==='error'?'err':'spin'}">${c.status==='ok'?'Ready':c.status==='warning'?'Warning':c.status==='error'?'Error':'Checking'}</span>`;
+        return `<div class="hc">${ico}<div><div class="hc-lbl">${c.label}</div><div class="hc-det">${c.detail||''}</div></div>${badge}</div>`;
+      }).join('')}
+    `).join('');
+  } catch(e) {}
+}
+
+/* ── ALMANAC CHAT ── */
+function toggleAlmanac() {
+  const ov = document.getElementById('alm-overlay');
+  ov.classList.toggle('open');
+  if (ov.classList.contains('open')) {
+    document.getElementById('alm-input').focus();
+  }
+}
+
+async function sendAlmanac() {
+  const input = document.getElementById('alm-input');
+  const msgs = document.getElementById('alm-msgs');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  // Add user message
+  msgs.innerHTML += `<div class="alm-msg-user">${q}</div>`;
+  // Add typing indicator
+  const typingId = 'alm-typing-' + Date.now();
+  msgs.innerHTML += `<div class="alm-typing" id="${typingId}"><span></span><span></span><span></span></div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    // Call Almanac at port 6205 via PRISM proxy, or direct
+    const res = await fetch('http://127.0.0.1:6205/query', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: q, context: 'prism_ui'})
+    });
+    const data = await res.json();
+    const answer = data.answer || data.response || data.result || 'I am not sure about that. Check the MANUAL.md or run: bash demo.sh';
+    document.getElementById(typingId)?.remove();
+    msgs.innerHTML += `<div class="alm-msg-ai">${answer}</div>`;
+  } catch(e) {
+    document.getElementById(typingId)?.remove();
+    msgs.innerHTML += `<div class="alm-msg-ai">Almanac is not responding right now. Make sure Cascadia is running: <strong>bash start.sh</strong></div>`;
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+/* ═══ SETTINGS SURFACE ═══ */
+let _hw = null;
+let _settingsMode = 'local';
+let _settingsModel = '3b';
+let _settingsProv = 'openai';
+
+async function renderSettingsSurface() {
+  const panel = document.getElementById('main-panel');
+  panel.innerHTML = `<div class="settings-wrap"><div style="font-size:15px;font-weight:700;color:var(--navy-800);margin-bottom:20px">Settings</div><div id="settings-body"><div style="font-size:12px;color:var(--text-dim)">Loading...</div></div></div>`;
+  // Fetch hardware + current settings in parallel
+  const [hwR, setR] = await Promise.all([
+    prismFetch('/api/prism/hardware'),
+    prismFetch('/api/prism/settings'),
+  ]);
+  _hw = hwR;
+  const llm = setR?.llm || {};
+  // Pre-select current values
+  _settingsMode  = llm.provider === 'openai'||llm.provider==='anthropic'||llm.provider==='groq' ? 'api'
+                 : llm.provider === 'ollama' ? 'ollama' : 'local';
+  _settingsModel = llm.active_model_id?.replace('qwen2.5-','') || hwR?.rec_model || '3b';
+  _settingsProv  = llm.provider && ['openai','anthropic','groq'].includes(llm.provider) ? llm.provider : 'openai';
+  _renderSettingsBody(hwR, llm);
+}
+
+function _renderSettingsBody(hw, llm) {
+  const gpuIcon = {apple_silicon:'🍎',nvidia:'🎮',amd:'🔴',intel_mac:'💻',cpu_only:'💻'}[hw?.gpu_type||'']||'💻';
+  const gpuOk   = ['apple_silicon','nvidia','amd'].includes(hw?.gpu_type||'');
+  const gpuLbl  = {apple_silicon:'Apple Silicon — Metal GPU',nvidia:'NVIDIA GPU — CUDA',
+    amd:'AMD GPU — ROCm',intel_mac:'Intel Mac — CPU only',cpu_only:'No GPU'}[hw?.gpu_type||''] || 'Unknown';
+  const ramOk   = (hw?.ram_gb||0) >= 8;
+  const MODELS = [
+    {id:'3b',  n:'Qwen 2.5 3B',  d:'Fast · great for most tasks',  sz:'2.0 GB', r:4},
+    {id:'7b',  n:'Qwen 2.5 7B',  d:'Balanced · best quality/speed', sz:'4.7 GB', r:8},
+    {id:'14b', n:'Qwen 2.5 14B', d:'Powerful · highest quality',    sz:'8.9 GB', r:16},
+  ];
+  const rec = hw?.rec_model || '3b';
+
+  document.getElementById('settings-body').innerHTML = `
+    <!-- Hardware card -->
+    <div class="settings-section">
+      <div class="settings-section-head">🖥 Your Hardware</div>
+      <div class="settings-section-body">
+        <div class="hw-detect-row">
+          <span class="hw-dot ${ramOk?'hw-dot-ok':'hw-dot-warn'}"></span>
+          <span class="hw-label">Memory</span>
+          <span class="hw-value">${hw?.ram_gb||'?'} GB RAM</span>
+        </div>
+        <div class="hw-detect-row">
+          <span class="hw-dot ${gpuOk?'hw-dot-ok':'hw-dot-warn'}"></span>
+          <span class="hw-label">GPU</span>
+          <span class="hw-value">${gpuIcon} ${gpuLbl}</span>
+        </div>
+        <div class="hw-detect-row">
+          <span class="hw-dot hw-dot-ok"></span>
+          <span class="hw-label">Recommendation</span>
+          <span class="hw-value" style="color:var(--prism-a);font-weight:600">
+            ${hw?.recommend==='local'?'Local AI — runs on your machine':'Cloud API — faster on this hardware'}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Mode -->
+    <div class="settings-section">
+      <div class="settings-section-head">⚡ AI Inference Mode</div>
+      <div class="settings-section-body">
+        <div class="mode-options">
+          <label class="mode-opt ${_settingsMode==='local'?'selected':''}" onclick="selMode('local')">
+            <input type="radio" name="aimode" ${_settingsMode==='local'?'checked':''}>
+            <div class="mode-opt-body">
+              <div class="mode-opt-title">Local — private & free
+                ${hw?.recommend==='local'?'<span class="rec-chip">Recommended</span>':''}
+              </div>
+              <div class="mode-opt-desc">Runs on your machine. No API key. No cost. Data never leaves.</div>
+            </div>
+          </label>
+          <label class="mode-opt ${_settingsMode==='api'?'selected':''}" onclick="selMode('api')">
+            <input type="radio" name="aimode" ${_settingsMode==='api'?'checked':''}>
+            <div class="mode-opt-body">
+              <div class="mode-opt-title">Cloud API
+                ${hw?.recommend==='api'?'<span class="rec-chip">Recommended</span>':''}
+              </div>
+              <div class="mode-opt-desc">OpenAI, Anthropic, or Groq. Fast on any hardware. Requires API key.</div>
+            </div>
+          </label>
+          ${hw?.ollama_models?.length?`
+          <label class="mode-opt ${_settingsMode==='ollama'?'selected':''}" onclick="selMode('ollama')">
+            <input type="radio" name="aimode" ${_settingsMode==='ollama'?'checked':''}>
+            <div class="mode-opt-body">
+              <div class="mode-opt-title">Ollama</div>
+              <div class="mode-opt-desc">${hw.ollama_models.slice(0,3).join(', ')} — already on your machine</div>
+            </div>
+          </label>`:''}
+        </div>
+
+        <!-- Local: model picker -->
+        <div id="sec-local" style="${_settingsMode==='local'?'':'display:none'}">
+          <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase">Model Size</div>
+          <div class="model-options">
+            ${MODELS.map(m=>{
+              const dim=(hw?.ram_gb||0)>0&&(hw?.ram_gb||0)<m.r;
+              const isRec=m.id===rec;
+              return `<label class="model-opt ${_settingsModel===m.id?'selected':''} ${dim?'disabled':''}"
+                onclick="${dim?'':'selModel(''+m.id+'')'}">
+                <input type="radio" name="mdl" ${_settingsModel===m.id?'checked':''}${dim?' disabled':''}>
+                <div><div class="model-opt-name">${m.n}${isRec?'<span class="rec-chip">Rec</span>':''}</div>
+                  <div class="model-opt-desc">${m.d}${dim?' — needs '+m.r+'GB RAM':''}</div></div>
+                <div><div class="model-opt-size">${m.sz}</div><div class="model-opt-ram">${m.r}GB min</div></div>
+              </label>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- API: provider + key -->
+        <div id="sec-api" style="${_settingsMode==='api'?'':'display:none'}">
+          <div class="prov-tabs">
+            <button class="ptab ${_settingsProv==='openai'?'on':''}" onclick="selProv('openai',this)">OpenAI</button>
+            <button class="ptab ${_settingsProv==='anthropic'?'on':''}" onclick="selProv('anthropic',this)">Anthropic</button>
+            <button class="ptab ${_settingsProv==='groq'?'on':''}" onclick="selProv('groq',this)">Groq</button>
+          </div>
+          <input class="settings-input" id="api-key-inp" type="password"
+            placeholder="API key" value="${llm.api_key||''}" oninput="chkApiKey()">
+          <input class="settings-input" id="api-model-inp" type="text"
+            placeholder="Model" value="${llm.model||'gpt-4o-mini'}">
+          <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px" id="api-key-link">
+            Get key: platform.openai.com/api-keys
+          </div>
+        </div>
+
+        <!-- Ollama -->
+        <div id="sec-ollama" style="${_settingsMode==='ollama'?'':'display:none'}">
+          <select class="settings-input" id="ollama-sel">
+            ${(hw?.ollama_models||[]).map(m=>`<option value="${m}" ${m===llm.model?'selected':''}>${m}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button class="settings-save-btn" id="save-btn" onclick="saveSettings()">
+      Save & Apply
+    </button>
+    <div id="save-status" style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:8px;min-height:16px"></div>
+  `;
+}
+
+function selMode(m) {
+  _settingsMode = m;
+  document.querySelectorAll('.mode-opt').forEach(el => el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('sec-local').style.display  = m==='local'  ? '' : 'none';
+  document.getElementById('sec-api').style.display    = m==='api'    ? '' : 'none';
+  document.getElementById('sec-ollama').style.display = m==='ollama' ? '' : 'none';
+}
+
+function selModel(id) {
+  _settingsModel = id;
+  document.querySelectorAll('.model-opt:not(.disabled)').forEach(el => el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+}
+
+const PROVD={openai:{m:'gpt-4o-mini',l:'platform.openai.com/api-keys'},
+             anthropic:{m:'claude-haiku-4-5-20251001',l:'console.anthropic.com/keys'},
+             groq:{m:'llama-3.3-70b-versatile',l:'console.groq.com/keys'}};
+function selProv(p, btn) {
+  _settingsProv = p;
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+  const mdlEl = document.getElementById('api-model-inp');
+  if (mdlEl && !mdlEl.value) mdlEl.value = PROVD[p].m;
+  const lnk = document.getElementById('api-key-link');
+  if (lnk) lnk.textContent = 'Get key: ' + PROVD[p].l;
+}
+function chkApiKey() {}
+
+async function saveSettings() {
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('save-status');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  let payload = { provider: _settingsMode === 'api' ? _settingsProv
+                            : _settingsMode === 'ollama' ? 'ollama' : 'llamacpp' };
+
+  if (_settingsMode === 'local') {
+    const MFILES = {'3b':'qwen2.5-3b-instruct-q4_k_m.gguf',
+                    '7b':'qwen2.5-7b-instruct-q4_k_m.gguf',
+                    '14b':'Qwen2.5-14B-Instruct-Q4_K_M.gguf'};
+    payload.model = MFILES[_settingsModel] || MFILES['3b'];
+    payload.model_size = _settingsModel;
+  } else if (_settingsMode === 'api') {
+    payload.model   = document.getElementById('api-model-inp')?.value || PROVD[_settingsProv].m;
+    payload.api_key = document.getElementById('api-key-inp')?.value || '';
+  } else if (_settingsMode === 'ollama') {
+    payload.model = document.getElementById('ollama-sel')?.value || '';
+  }
+
+  try {
+    const r = await fetch('/api/prism/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      status.textContent = d.setup_running
+        ? 'Saved. Installing AI model in background...'
+        : 'Saved successfully.';
+      btn.textContent = '✓ Saved';
+      // Switch to health tab after short delay
+      setTimeout(() => switchSurface('health'), 1200);
+    } else {
+      status.textContent = 'Error: ' + (d.error || 'unknown');
+      btn.disabled = false; btn.textContent = 'Save & Apply';
+    }
+  } catch(e) {
+    status.textContent = 'Could not save — check logs';
+    btn.disabled = false; btn.textContent = 'Save & Apply';
+  }
+}
+
+/* ═══ HEALTH SURFACE — bottom buttons ═══ */
+function _healthButtons() {
+  return `
+    <div style="display:flex;gap:10px;padding:20px;justify-content:center;flex-wrap:wrap">
+      <button onclick="switchSurface('ops')"
+        style="padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,var(--prism-a),var(--prism-b));
+          color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">
+        Start Work →
+      </button>
+      <button onclick="switchSurface('settings')"
+        style="padding:10px 20px;border-radius:10px;background:var(--surface);
+          color:var(--navy-800);border:1px solid var(--gray-200);cursor:pointer;
+          font-size:13px;font-weight:500;font-family:var(--font)">
+        ⚙ Settings
+      </button>
+      <button onclick="toggleAlmanac()"
+        style="padding:10px 20px;border-radius:10px;background:var(--surface);
+          color:var(--navy-800);border:1px solid var(--gray-200);cursor:pointer;
+          font-size:13px;font-weight:500;font-family:var(--font)">
+        ? Almanac Help
+      </button>
+    </div>`;
+}
+
+/* ── AUTO-OPEN HEALTH ON FRESH INSTALL ── */
+function maybeOpenHealth() {
+  // If this looks like a fresh install (no operators, health param in URL)
+  if (window.location.hash === '#health' || window.location.search.includes('health')) {
+    switchSurface('health');
+  }
+}
 
 /* ═══ UTILITIES ═══ */
 function esc(s){const d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML;}
@@ -1865,7 +2262,23 @@ renderSidebar(); renderMain(); updateNavBadges();
   loadModelsFromPRISM();
   refreshOperators();
   setInterval(refreshOperators, 10000);
+  maybeOpenHealth();
+  setInterval(()=>{ if(S.surface==='health') refreshHealth(); }, 8000);
 })();
 </script>
+<!-- ALMANAC OVERLAY -->
+<div class="alm-overlay" id="alm-overlay">
+  <div class="alm-header">
+    <div class="alm-title">⬡ Almanac · AI Help</div>
+    <button class="alm-close" onclick="toggleAlmanac()">✕</button>
+  </div>
+  <div class="alm-msgs" id="alm-msgs">
+    <div class="alm-msg-ai">Hi! I'm Almanac. Ask me anything about Cascadia OS — how to configure it, what a component does, why something paused, or what to do next.</div>
+  </div>
+  <div class="alm-input-row">
+    <input class="alm-input" id="alm-input" placeholder="Ask Almanac..." onkeydown="if(event.key==='Enter')sendAlmanac()">
+    <button class="alm-send" onclick="sendAlmanac()">Ask</button>
+  </div>
+</div>
 </body>
 </html>

@@ -400,7 +400,13 @@ if [[ "$STARTED" == "true" ]]; then
     # Open PRISM dashboard
     info "Opening PRISM dashboard in your browser..."
     sleep 1
-    [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300/setup" 2>/dev/null || true
+    # First install — open Settings surface so user can choose AI mode
+    if [[ ! -f "$INSTALL_DIR/.setup_complete" ]]; then
+        [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300/#settings" 2>/dev/null || true
+        touch "$INSTALL_DIR/.setup_complete"
+    else
+        [[ "$(uname)" == "Darwin" ]] && open "http://localhost:6300/#health" 2>/dev/null || true
+    fi
 
     # Refresh SwiftBar
     [[ "$(uname)" == "Darwin" ]] && open -g "swiftbar://refreshAllPlugins" 2>/dev/null || true

@@ -88,12 +88,225 @@ class PrismService:
         self.runtime.register_route('GET',  '/api/prism/models',     self.models_list)
         self.runtime.register_route('GET',  '/api/prism/operators',  self.operator_status)
         self.runtime.register_route('GET',  '/setup',                self.serve_setup)
-        self.runtime.register_route('GET',  '/api/prism/health-check', self.full_health_check)
+        self.runtime.register_route('GET',  '/api/prism/health-check',   self.full_health_check)
+        self.runtime.register_route('GET',  '/api/prism/hardware',        self.hardware_info)
+        self.runtime.register_route('GET',  '/api/prism/settings',        self.get_settings)
+        self.runtime.register_route('POST', '/api/prism/settings',        self.save_settings)
+        self.runtime.register_route('GET',  '/api/prism/setup-progress',  self.setup_progress)
 
     # ------------------------------------------------------------------
     # Aggregated views
     # ------------------------------------------------------------------
 
+
+
+    def hardware_info(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """Detect hardware — RAM, GPU, arch. Called fresh every time from PRISM."""
+        import platform as _pl, subprocess as _sp, shutil
+        arch  = _pl.machine()
+        ram_gb = 0
+        gpu_type = 'unknown'
+        chip = ''
+        try:
+            if _pl.system() == 'Darwin':
+                ram_bytes = int(_sp.check_output(['sysctl','-n','hw.memsize'],
+                                                  stderr=_sp.DEVNULL).strip())
+                ram_gb = ram_bytes // (1024 ** 3)
+                if arch == 'arm64':
+                    gpu_type = 'apple_silicon'
+                    try:
+                        raw = _sp.check_output(
+                            ['system_profiler','SPHardwareDataType'],
+                            stderr=_sp.DEVNULL, text=True)
+                        for line in raw.splitlines():
+                            if 'Chip:' in line:
+                                chip = line.split(':',1)[1].strip()
+                                break
+                    except Exception:
+                        chip = 'Apple Silicon'
+                else:
+                    gpu_type = 'intel_mac'
+                    try:
+                        chip = _sp.check_output(
+                            ['sysctl','-n','machdep.cpu.brand_string'],
+                            stderr=_sp.DEVNULL, text=True).strip()
+                    except Exception:
+                        chip = 'Intel'
+            elif _pl.system() == 'Linux':
+                with open('/proc/meminfo') as f:
+                    for line in f:
+                        if line.startswith('MemTotal:'):
+                            ram_gb = int(line.split()[1]) // (1024 * 1024)
+                try:
+                    _sp.run(['nvidia-smi'], capture_output=True, check=True, timeout=3)
+                    gpu_type = 'nvidia'
+                except Exception:
+                    gpu_type = 'cpu_only'
+        except Exception:
+            pass
+
+        # Ollama detection
+        ollama_models: list = []
+        try:
+            import urllib.request as _ur
+            with _ur.urlopen('http://localhost:11434/api/tags', timeout=2) as r:
+                import json as _j
+                ollama_models = [m['name'] for m in _j.loads(r.read()).get('models', [])]
+        except Exception:
+            pass
+
+        # llama-server binary detection
+        llama_bin = ''
+        for candidate in ['/opt/homebrew/bin/llama-server',
+                          '/usr/local/bin/llama-server',
+                          str(Path.home() / 'llama.cpp/build/bin/llama-server')]:
+            if Path(candidate).is_file():
+                llama_bin = candidate
+                break
+
+        # Recommendation
+        gpu_ok = gpu_type in ('apple_silicon', 'nvidia', 'amd')
+        if gpu_ok and ram_gb >= 4:
+            recommend = 'local'
+            rec_model = '7b' if ram_gb >= 8 else '3b'
+        else:
+            recommend = 'api'
+            rec_model = '3b'
+
+        return 200, {
+            'arch': arch, 'ram_gb': ram_gb, 'gpu_type': gpu_type,
+            'chip': chip, 'platform': _pl.system(),
+            'recommend': recommend, 'rec_model': rec_model,
+            'llama_bin': llama_bin, 'llama_installed': bool(llama_bin),
+            'ollama_models': ollama_models,
+            'generated_at': _now(),
+        }
+
+    def get_settings(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """Return current LLM config and models list for the Settings surface."""
+        llm  = self.config.get('llm', {})
+        mods = self.config.get('models', [])
+        return 200, {
+            'llm': llm,
+            'models': mods,
+            'sentinel_fail_open': self.config.get('sentinel_fail_open', False),
+        }
+
+    def save_settings(self, payload: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Save LLM settings to config.json.
+        If local mode chosen with a model that needs downloading,
+        triggers setup-llm.sh in the background and returns immediately.
+        """
+        import subprocess as _sp, threading as _th, os as _os
+        config_path = self.config.get('__config_path__', 'config.json')
+
+        try:
+            with open(config_path) as f:
+                disk_config = json.load(f)
+        except Exception as e:
+            return 500, {'error': f'Could not read config: {e}'}
+
+        provider   = payload.get('provider', 'llamacpp')
+        model_file = payload.get('model', '')
+        api_key    = payload.get('api_key', '')
+        model_size = payload.get('model_size', '3b')
+
+        disk_config.setdefault('llm', {})
+        disk_config['llm']['provider']   = provider
+        disk_config['llm']['model']      = model_file
+        disk_config['llm']['configured'] = True
+
+        if provider == 'llamacpp':
+            disk_config['llm']['base_url']        = 'http://127.0.0.1:8080'
+            disk_config['llm']['active_model_id'] = f'qwen2.5-{model_size}'
+        elif provider in ('openai', 'anthropic', 'groq'):
+            disk_config['llm']['api_key'] = api_key
+            disk_config['llm']['base_url'] = None
+        elif provider == 'ollama':
+            disk_config['llm']['base_url'] = 'http://localhost:11434'
+
+        try:
+            with open(config_path, 'w') as f:
+                json.dump(disk_config, f, indent=2)
+            # Update in-memory config too
+            self.config['llm'] = disk_config['llm']
+        except Exception as e:
+            return 500, {'error': f'Could not write config: {e}'}
+
+        # If local provider — run setup-llm.sh in background
+        needs_setup = provider == 'llamacpp'
+        if needs_setup:
+            install_dir = str(Path(config_path).parent)
+            def _run_setup():
+                _sp.run(
+                    ['bash', f'{install_dir}/setup-llm.sh', model_size],
+                    cwd=install_dir,
+                    capture_output=True,
+                )
+            _th.Thread(target=_run_setup, daemon=True).start()
+
+        self.runtime.logger.info(
+            'PRISM settings saved: provider=%s model=%s', provider, model_file
+        )
+        return 200, {
+            'ok': True,
+            'provider': provider,
+            'model': model_file,
+            'setup_running': needs_setup,
+        }
+
+    def setup_progress(self, _: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
+        """
+        Return current setup-llm.sh progress by checking what exists on disk.
+        Used by PRISM Settings/Health surfaces to show live install status.
+        """
+        import os as _os
+        llm = self.config.get('llm', {})
+        models_dir_raw = llm.get('models_dir', './models')
+        config_path = self.config.get('__config_path__', 'config.json')
+        if models_dir_raw.startswith('.'):
+            models_dir = str(Path(config_path).parent / models_dir_raw)
+        else:
+            models_dir = _os.path.expanduser(models_dir_raw)
+
+        model_file  = llm.get('model', '')
+        model_path  = _os.path.join(models_dir, model_file) if model_file else ''
+        model_exists = bool(model_path and _os.path.isfile(model_path))
+        model_size_gb = round(_os.path.getsize(model_path) / 1e9, 1) if model_exists else 0
+
+        llama_bin = llm.get('llama_bin', '')
+        llama_ok  = bool(llama_bin and _os.path.isfile(llama_bin))
+        if not llama_ok:
+            for c in ['/opt/homebrew/bin/llama-server', '/usr/local/bin/llama-server']:
+                if _os.path.isfile(c):
+                    llama_ok = True
+                    break
+
+        # Check if llama-server is responding
+        llm_live = False
+        try:
+            import urllib.request as _ur
+            base = llm.get('base_url', 'http://127.0.0.1:8080')
+            with _ur.urlopen(f'{base}/health', timeout=2) as r:
+                llm_live = r.status == 200
+        except Exception:
+            pass
+
+        configured = llm.get('configured', False)
+        provider   = llm.get('provider')
+
+        return 200, {
+            'llama_installed': llama_ok,
+            'model_downloaded': model_exists,
+            'model_file': model_file,
+            'model_size_gb': model_size_gb,
+            'model_path': model_path,
+            'llm_responding': llm_live,
+            'configured': configured,
+            'provider': provider,
+            'ready': configured and (llm_live or provider not in ('llamacpp',)),
+        }
 
     def serve_setup(self, _) -> tuple[int, Dict[str, Any]]:
         """Serve the post-install health check page."""
