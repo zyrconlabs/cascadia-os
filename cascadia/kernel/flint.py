@@ -170,6 +170,10 @@ class Flint:
 
     def monitor_loop(self) -> None:
         stale = self.config['flint']['heartbeat_stale_after_seconds']
+        # Grace period: allow components to write first heartbeat before monitoring
+        grace = stale  # same as stale threshold — typically 15s
+        self.logger.info('FLINT monitor waiting %ss for components to stabilise', grace)
+        self.shutdown_event.wait(timeout=grace)
         while not self.shutdown_event.is_set():
             for component in self.components.values():
                 ok = self._check_health(component)
@@ -180,8 +184,14 @@ class Flint:
                         ok = False
                         component.last_error = f'heartbeat stale ({age:.1f}s)'
                 else:
-                    ok = False
-                    component.last_error = 'missing heartbeat'
+                    # No heartbeat file yet — only flag as error if process is also dead
+                    proc = self.processes.get(component.name)
+                    if proc is not None and proc.poll() is None:
+                        # Process alive, heartbeat not yet written — give it time
+                        ok = True
+                    else:
+                        ok = False
+                        component.last_error = 'missing heartbeat'
                 if not ok and not self.shutdown_event.is_set():
                     self._maybe_restart(component)
                 elif ok:
