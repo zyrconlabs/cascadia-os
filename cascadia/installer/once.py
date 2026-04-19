@@ -424,7 +424,8 @@ class OnceInstaller:
         if not manifest_dir.exists():
             self._warn('Operator manifest directory not found')
             return
-        manifests = list(manifest_dir.glob('*.json'))
+        # registry.json is the operator catalogue — not a component manifest
+        manifests = [f for f in manifest_dir.glob('*.json') if f.name != 'registry.json']
         if not manifests:
             self._warn('No operator manifests found')
             return
