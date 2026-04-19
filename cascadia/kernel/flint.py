@@ -208,13 +208,24 @@ class Flint:
         port = self.config['flint']['status_port']
 
         class Handler(BaseHTTPRequestHandler):
+            def _cors(self) -> None:
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
             def _send(self, code: int, body: Dict[str, Any]) -> None:
                 raw = json.dumps(body).encode()
                 self.send_response(code)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(raw)))
+                self._cors()
                 self.end_headers()
                 self.wfile.write(raw)
+
+            def do_OPTIONS(self) -> None:  # noqa: N802
+                self.send_response(200)
+                self._cors()
+                self.end_headers()
 
             def _read_body(self) -> bytes:
                 length = int(self.headers.get('Content-Length', 0))
@@ -261,6 +272,7 @@ class Flint:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.send_header('Content-Length', str(len(raw)))
+                    self._cors()
                     self.end_headers()
                     self.wfile.write(raw)
                 except Exception as exc:
@@ -270,7 +282,7 @@ class Flint:
             def log_message(self, fmt: str, *args: Any) -> None:
                 flint.logger.debug(fmt, *args)
 
-        self._status_server = ReusableHTTPServer(('127.0.0.1', port), Handler)
+        self._status_server = ReusableHTTPServer(('0.0.0.0', port), Handler)
         self.logger.info('FLINT status server on port %s', port)
         self._status_server.serve_forever(poll_interval=0.5)
 

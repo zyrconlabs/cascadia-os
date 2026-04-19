@@ -850,7 +850,7 @@ class PrismService:
             'llm_base_url': llm.get('base_url', 'http://127.0.0.1:8080'),
             'llm_provider': llm.get('provider', 'llamacpp'),
             # FLINT proxy is always available for chat — normalises model names
-            'flint_proxy_url': f'http://127.0.0.1:{self._flint_port}',
+            'flint_proxy_url': f'http://localhost:{self._flint_port}',
             'count': len(models),
             'generated_at': _now(),
         }

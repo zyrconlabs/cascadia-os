@@ -594,7 +594,7 @@ input[type="file"]{display:none}
    All backend calls go through GatewayContract.
    Swap kernels by replacing this object's impls.
    ════════════════════════════════════════════ */
-let GW = 'http://127.0.0.1:4011'; // FLINT LLM proxy — always available when Cascadia runs, updated from /api/prism/models
+let GW = 'http://localhost:4011'; // FLINT LLM proxy — always available when Cascadia runs, updated from /api/prism/models
 const PRISM_URL = window.location.origin; // Always same origin as serving host — no CORS issues
 
 async function prismFetch(path) {
@@ -1143,7 +1143,7 @@ async function sendMsg(id, text) {
 /* ═══ OPERATOR POLLING ═══ */
 function mapStatus(s) { if(s==='online')return'active'; if(s==='offline'||s==='error')return'offline'; if(s==='standby')return'standby'; return s||'offline'; }
 
-async function refreshOperators() {
+async function refreshSidebar() {
   const data = await prismFetch('/api/prism/overview');
   const connDot = document.getElementById('conn-dot');
   if (data) {
@@ -1175,7 +1175,7 @@ async function refreshOperators() {
           id: op.id,
           name: op.name,
           role: op.category ? op.category.charAt(0).toUpperCase()+op.category.slice(1) : 'Operator',
-          status: op.status === 'offline' ? 'offline' : op.op_status === 'production' ? 'active' : 'standby',
+          status: op.status === 'offline' ? 'offline' : 'active',
           model: S.model || '—',
           routing: 'local',
           port: op.port,
@@ -1217,7 +1217,7 @@ async function refreshOperators() {
     S.connected = false;
     if (connDot) connDot.style.background = 'var(--red)';
     if (!S.operators.length) { S.operators = demoDB(); ensureBeacon(); }
-    S.operators.forEach(c => { if (!c.isBeacon) c.status = 'offline'; });
+    // status preserved during refresh — updated after fetch completes
   }
   renderSidebar();
   if (S.selected && S.surface === 'ops') renderMain();
@@ -1872,6 +1872,16 @@ async function refreshOperators() {
     'recon':'RC','scout':'SC','quote':'QT','chief':'CH',
     'aurelia':'AU','debrief':'DB','competition-researcher':'CR','jr-programmer':'JP'
   };
+
+  // Sync live status into S.operators so sidebar reflects real state
+  d.operators.forEach(live => {
+    const op = S.operators.find(o => o.id === live.id);
+    if (op) {
+      op.status = live.status === 'offline' ? 'offline' : 'active';
+      op.port   = live.port;
+    }
+  });
+  renderSidebar();
 
   container.innerHTML = d.operators.map(op => {
     const online = op.status !== 'offline';
@@ -2749,8 +2759,8 @@ Vault.loadAllRuns().then(runs=>{
 renderSidebar(); renderMain(); updateNavBadges();
 
 (async()=>{
-  await refreshOperators();
-  setInterval(refreshOperators, POLL);
+  await refreshSidebar();
+  setInterval(refreshSidebar, POLL);
   startLivePoll();
   loadModelsFromPRISM();
   refreshOperators();
