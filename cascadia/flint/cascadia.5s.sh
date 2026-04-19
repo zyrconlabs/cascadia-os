@@ -14,8 +14,15 @@ SELF="$0"
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 LOG_DIR="$REPO_DIR/data/logs"
 VAULT_DIR="$REPO_DIR/data/vault"
-VENV="$REPO_DIR/venv/bin/python3"
-PYTHON="${VENV:-python3}"
+# Check both .venv (new) and venv (legacy)
+if [[ -f "$REPO_DIR/.venv/bin/python3" ]]; then
+  VENV="$REPO_DIR/.venv/bin/python3"
+elif [[ -f "$REPO_DIR/venv/bin/python3" ]]; then
+  VENV="$REPO_DIR/venv/bin/python3"
+else
+  VENV=""
+fi
+PYTHON="${VENV:-$(command -v python3)}"
 
 mkdir -p "$LOG_DIR"
 mkdir -p "$VAULT_DIR/operators/scout"

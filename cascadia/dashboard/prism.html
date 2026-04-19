@@ -1863,6 +1863,8 @@ renderSidebar(); renderMain(); updateNavBadges();
   setInterval(refreshCells, POLL);
   startLivePoll();
   loadModelsFromPRISM();
+  refreshOperators();
+  setInterval(refreshOperators, 10000);
 })();
 </script>
 </body>

@@ -19,6 +19,11 @@ chmod +x "$PLUGIN_SRC"
 linked=false
 
 if [[ "$(uname)" == "Darwin" ]]; then
+    # Create SwiftBar plugins dir if SwiftBar is installed but dir missing
+    if [[ ! -d "$SWIFTBAR_DIR" ]] && [[ -d "/Applications/SwiftBar.app" || -d "$HOME/Applications/SwiftBar.app" ]]; then
+        mkdir -p "$SWIFTBAR_DIR"
+        echo "Created SwiftBar plugins directory"
+    fi
     if [[ -d "$SWIFTBAR_DIR" ]]; then
         # Remove any old copy first
         rm -f "$SWIFTBAR_DIR/cascadia.5s.sh"
