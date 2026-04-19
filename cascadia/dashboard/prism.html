@@ -523,7 +523,30 @@ async function renderHealthSurface() {
 async function refreshHealth() {
   try {
     const d = await prismFetch('/api/prism/health-check');
-    if (!d) return;
+    if (!d) {
+      // Backend offline — show clear offline state
+      const grid = document.getElementById('hgrid');
+      const countEl = document.getElementById('hs-count');
+      const labelEl = document.getElementById('hs-label');
+      if (countEl) countEl.textContent = '—';
+      if (labelEl) labelEl.textContent = 'PRISM not reachable';
+      if (grid) grid.innerHTML = `
+        <div class="hc-group">Connection</div>
+        <div class="hc">
+          <div class="hc-ico hc-err"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          <div><div class="hc-lbl">PRISM Gateway</div>
+          <div class="hc-det">Cannot reach http://127.0.0.1:6300 — run: python3 -m cascadia.kernel.watchdog --config config.json</div></div>
+          <span class="hc-badge hcb-err">Offline</span>
+        </div>
+        <div class="hc-group">Services</div>
+        ${['SIGNAL','SENTINEL','VAULT','VANGUARD','PRISM'].map(svc => `
+        <div class="hc">
+          <div class="hc-ico hc-spin"></div>
+          <div><div class="hc-lbl">${svc}</div><div class="hc-det">Status unknown — backend offline</div></div>
+          <span class="hc-badge hcb-spin">Unknown</span>
+        </div>`).join('')}`;
+      return;
+    }
     const grid = document.getElementById('hgrid');
     const countEl = document.getElementById('hs-count');
     const labelEl = document.getElementById('hs-label');
@@ -2164,7 +2187,23 @@ async function renderSettingsSurface() {
   // Client-side hardware fallback when backend not available
   let hw = hwR;
   if (!hw) {
-    const ramGB = navigator.deviceMemory || null;
+    // RAM: try JS heap estimate first (Chrome), then deviceMemory (capped at 8 by spec, just a hint)
+    let ramGB = null;
+    try {
+      // performance.memory.jsHeapSizeLimit gives ~half total RAM on Chrome
+      if (performance?.memory?.jsHeapSizeLimit) {
+        const heapLimit = performance.memory.jsHeapSizeLimit / (1024**3);
+        // heap limit is ~50% of physical RAM; round to nearest common size
+        const est = heapLimit * 2;
+        ramGB = [4,8,16,24,32,64].reduce((a,b) => Math.abs(b-est) < Math.abs(a-est) ? b : a);
+      }
+    } catch(_) {}
+    if (!ramGB) {
+      // deviceMemory is capped at 8 by browsers but still useful as floor
+      const dm = navigator.deviceMemory;
+      ramGB = dm ? Math.max(dm, 8) : null; // treat as minimum
+    }
+
     let gpuType = 'cpu_only', gpuLabel = 'Unknown';
     try {
       const canvas = document.createElement('canvas');
@@ -2172,12 +2211,13 @@ async function renderSettingsSurface() {
       if (gl) {
         const dbgInfo = gl.getExtension('WEBGL_debug_renderer_info');
         const renderer = dbgInfo ? gl.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL) : '';
-        if (/apple/i.test(renderer))       { gpuType='apple_silicon'; gpuLabel='Apple Silicon — Metal GPU'; }
-        else if (/nvidia/i.test(renderer)) { gpuType='nvidia';        gpuLabel='NVIDIA GPU — CUDA'; }
-        else if (/amd|radeon/i.test(renderer)) { gpuType='amd';      gpuLabel='AMD GPU — ROCm'; }
-        else if (renderer)                 { gpuLabel = renderer.slice(0,40); }
+        if (/apple/i.test(renderer))           { gpuType='apple_silicon'; gpuLabel='Apple Silicon — Metal GPU'; }
+        else if (/nvidia/i.test(renderer))     { gpuType='nvidia';        gpuLabel='NVIDIA GPU — CUDA'; }
+        else if (/amd|radeon/i.test(renderer)) { gpuType='amd';           gpuLabel='AMD GPU — ROCm'; }
+        else if (renderer)                     { gpuLabel = renderer.slice(0,40); }
       }
     } catch(_) {}
+
     const rec = (ramGB||0) >= 16 ? '14b' : (ramGB||0) >= 8 ? '7b' : '3b';
     hw = { ram_gb: ramGB, gpu_type: gpuType, gpu_label: gpuLabel, rec_model: rec, _clientDetected: true };
   }
@@ -2214,7 +2254,7 @@ function _renderSettingsBody(hw, llm) {
         <div class="hw-detect-row">
           <span class="hw-dot ${ramOk?'hw-dot-ok':'hw-dot-warn'}"></span>
           <span class="hw-label">Memory</span>
-          <span class="hw-value">${hw?.ram_gb||'?'} GB RAM</span>
+          <span class="hw-value">${hw?.ram_gb ? (hw._clientDetected?'~':'')+hw.ram_gb+' GB RAM' : '? GB RAM'}</span>
         </div>
         <div class="hw-detect-row">
           <span class="hw-dot ${gpuOk?'hw-dot-ok':'hw-dot-warn'}"></span>
