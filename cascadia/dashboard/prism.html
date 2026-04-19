@@ -640,9 +640,21 @@ const GatewayContract = {
   async switchModel(file) { return gw('POST', '/api/model/switch', {model:file}); },
 
   // ── Workers ──
-  async getWorkerStatus(id) { return gw('GET', `/api/workers/${id}/status`); },
-  async getWorkerThoughts(id) { return gw('GET', `/api/workers/${id}/thoughts`); },
-  async stopWorker(id) { return gw('POST', `/api/workers/${id}/stop`); },
+  async getWorkerStatus(id) {
+    const port = S.operators.find(x=>x.id===id)?.port;
+    if (port) { try { const r=await fetch(`http://127.0.0.1:${port}/api/status`,{signal:AbortSignal.timeout(3000)}); return r.ok?await r.json():null; } catch(e){} }
+    return gw('GET', `/api/workers/${id}/status`);
+  },
+  async getWorkerThoughts(id) {
+    const port = S.operators.find(x=>x.id===id)?.port;
+    if (port) { try { const r=await fetch(`http://127.0.0.1:${port}/api/thoughts`,{signal:AbortSignal.timeout(3000)}); return r.ok?await r.json():null; } catch(e){} }
+    return null;
+  },
+  async stopWorker(id) {
+    const port = S.operators.find(x=>x.id===id)?.port;
+    if (port) { try { await fetch(`http://127.0.0.1:${port}/api/stop`,{method:'POST',signal:AbortSignal.timeout(3000)}); } catch(e){} }
+    return gw('POST', `/api/workers/${id}/stop`);
+  },
   async sendWorkerCommand(id, cmd, args) { return gw('POST', `/api/workers/${id}/command`, {cmd, args}); },
 
   // ── Runs ──
