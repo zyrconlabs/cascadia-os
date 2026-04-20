@@ -116,7 +116,7 @@ success "Virtual environment ready."
 # ── 5. Install package ────────────────────────────────────────────────────────
 info "Installing Cascadia OS..."
 pip install --quiet --upgrade pip
-pip install --quiet -e .
+pip install --quiet -e ".[operators]"
 success "Package installed."
 
 # ── 6. Config ─────────────────────────────────────────────────────────────────

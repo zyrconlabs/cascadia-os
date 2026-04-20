@@ -10,28 +10,16 @@ Get from zero to a running AI operator platform in under 5 minutes.
 curl -fsSL https://raw.githubusercontent.com/zyrconlabs/cascadia-os/main/install.sh | bash
 ```
 
-During install you will be asked one question: **how should Cascadia run AI?**
+After install, Cascadia starts automatically and opens PRISM at `http://localhost:6300`.
+Configure your AI model in **PRISM → Settings** — choose Local (llama.cpp), Cloud API, or Ollama.
 
-**[1] Local — recommended for most users**
-Installs llama.cpp (via Homebrew) and downloads a Qwen 2.5 model.
-Models are saved to `~/cascadia-os/models/`. Nothing leaves your machine.
-
-| Size | Download | RAM needed | Best for |
+| Local Model | Download | RAM needed | Best for |
 |------|----------|------------|----------|
 | 3B | 2.0 GB | 4 GB | Most Macs, fast responses |
 | 7B | 4.7 GB | 8 GB | Best quality/speed balance |
 | 14B | 8.9 GB | 16 GB | Highest quality |
 
-**[2] Cloud API** — OpenAI, Anthropic, or Groq. Needs an API key. Works on any device.
-
-**[3] Ollama** — Uses a model you already have running locally.
-
-**[4] Skip** — Configure later with `bash setup-llm.sh`
-
-After install:
-- Cascadia starts automatically at `http://localhost:6300`
-- SwiftBar menu bar icon shows system status
-- On next reboot, everything starts automatically
+The SwiftBar menu bar icon shows system status. On next reboot, everything starts automatically.
 
 **Already have models?** Run `bash setup-llm.sh` — it will find existing files and let you point Cascadia at them.
 
@@ -109,7 +97,7 @@ python3 -m cascadia.kernel.watchdog --config config.json
 python3 -m unittest discover -s tests -v
 ```
 
-136 tests. All should pass.
+165 tests. All should pass.
 
 ---
 
