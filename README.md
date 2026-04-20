@@ -98,10 +98,8 @@ Cascadia OS coordinates AI operators that:
 ### Durability layer
 | Module | What it does |
 |---|---|
-| run_store | Durable run records with process_state + run_state split |
-| step_journal | Append-only step log — source of truth for resume |
-| resume_manager | Safe resume-point calculation from committed steps |
-| idempotency | SHA-256 keyed side effect records, UNIQUE DB constraint |
+| VAULT | SQLite-backed memory, context and state across sessions |
+| CURTAIN | AES-256-GCM field encryption, HMAC-SHA256 envelope signing |
 
 ### Named components
 | Name | Port | What it does |
@@ -159,8 +157,8 @@ Full documentation: [PRISM_MANUAL.md](./PRISM_MANUAL.md)
 |---|---|---|---|
 | RECON | Intelligence | Production | Autonomous web research, extracts contacts to CSV |
 | SCOUT | Inbound | Production | Chat widget, qualifies leads, routes to workflow |
-| QUOTE | Sales | Production | RFQ to proposal in under 5 minutes |
-| CHIEF | Intelligence | Production | Daily brief synthesizing all operators |
+| QUOTE | Sales | Beta  | RFQ to proposal in under 5 minutes |
+| CHIEF | Intelligence | Beta | Daily brief synthesizing all operators |
 | Aurelia | Executive | Beta | EA — commitments, priorities, weekly CEO report |
 | Debrief | Sales | Beta | Post-call logger — action items, follow-up drafts |
 
