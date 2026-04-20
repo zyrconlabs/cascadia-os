@@ -51,7 +51,7 @@ bash demo.sh
 **One-click install — done in under a minute:**
 ![Install](./assets/install.png)
 
-**Watchdog running — all 13 components healthy:**
+**Watchdog running — all 11 kernel components healthy:**
 ![Watchdog](./assets/watchdog.png)
 
 **PRISM dashboard — live system status:**
@@ -99,6 +99,7 @@ Cascadia OS coordinates AI operators that:
 | Module | What it does |
 |---|---|
 | VAULT | SQLite-backed memory, context and state across sessions |
+| VAULT | SQLite-backed memory, context and state across sessions and crashes |
 | CURTAIN | AES-256-GCM field encryption, HMAC-SHA256 envelope signing |
 
 ### Named components
@@ -158,6 +159,7 @@ Full documentation: [PRISM_MANUAL.md](./PRISM_MANUAL.md)
 | RECON | Intelligence | Production | Autonomous web research, extracts contacts to CSV |
 | SCOUT | Inbound | Production | Chat widget, qualifies leads, routes to workflow |
 | QUOTE | Sales | Beta  | RFQ to proposal in under 5 minutes |
+| QUOTE | Sales | Beta | RFQ to proposal in under 5 minutes |
 | CHIEF | Intelligence | Beta | Daily brief synthesizing all operators |
 | Aurelia | Executive | Beta | EA — commitments, priorities, weekly CEO report |
 | Debrief | Sales | Beta | Post-call logger — action items, follow-up drafts |

@@ -45,7 +45,7 @@ curl -s http://127.0.0.1:4011/health
 
 Should return: `{"component": "flint", "state": "ready", "ok": true}`
 
-Or check the SwiftBar menu bar icon — it should show `⬡ COS 13/13` in green.
+Or check the SwiftBar menu bar icon — it should show `⬡ Z·AI` in green.
 
 **If port 4011 is not responding:**
 ```bash
@@ -68,7 +68,7 @@ tail -50 ~/cascadia-os/data/logs/flint.log
 open http://localhost:6300/
 ```
 
-PRISM shows live status of all 13 components, active workflow runs, pending approvals, and operator health.
+PRISM shows live status of all 11 kernel components and your installed operators, active workflow runs, pending approvals, and operator health.
 
 ---
 
@@ -116,7 +116,6 @@ python3 -m unittest discover -s tests -v
 ## Menu bar controller
 
 The SwiftBar menu bar icon shows live status of all components. Click it to:
-- Start / stop individual operators
 - Open PRISM dashboard
 - Open SCOUT chat widget
 - View logs

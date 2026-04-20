@@ -32,7 +32,7 @@ PRISM is a single HTML file. There is no build step, no server to run, no npm in
 PRISM has six surfaces, selectable from the nav rail on the left.
 
 ### Ops
-The main working surface. The sidebar lists all 11 Cascadia components (CREW, VAULT, SENTINEL, CURTAIN, BEACON, STITCH, VANGUARD, HANDSHAKE, BELL, ALMANAC, PRISM) with live green/yellow/red status dots. Selecting any component opens a chat panel. Beacon is the system orchestrator entry point.
+The main working surface. The sidebar lists Beacon (system orchestrator) and all installed operators (RECON, SCOUT, QUOTE, CHIEF, Aurelia, Debrief, and others) with live online/offline status. Select any operator to open a chat panel. Kernel components (CREW, VAULT, SENTINEL, etc.) are visible in the Health tab only — they are infrastructure, not operators.
 
 **Beacon commands:**
 - `/status` — queries `/api/prism/overview` and renders a live component health grid with healthy count, run count, and pending approvals
@@ -169,10 +169,23 @@ PRISM should be treated as a separate project from the Cascadia kernel. The kern
 
 ## Changelog
 
+**v2.2 — Cascadia OS v0.43**
+- Sidebar now shows operators only — Beacon at top, installed operator agents below
+- Kernel components moved to Health tab exclusively — never in chat sidebar
+- `cell` → `operator` rename throughout (CSS classes, JS variables, HTML ids)
+- Settings surface — hardware detection, AI mode picker, model size selector
+- Health surface — kernel components + operator agents with live status
+- Terminal surface — dark terminal UI (WebSocket backend on roadmap v0.5)
+- Almanac overlay — bottom-right floating chat assistant
+- SwiftBar branding updated to Z·AI — kernel and AI model status only
+- Beacon restored as first sidebar item — system orchestrator with routing tag
+- `refreshOperators` reads `/api/prism/operators` — live from registry.json
+- `demoDB` fallback shows registered operators in offline state
+
 **v2.1 — Cascadia OS edition**
 - Wired to Cascadia OS PRISM endpoint at `:6300` instead of Zyrcon Gateway at `:7001`
 - Replaced navy dark theme with Cascadia light palette (Inter + JetBrains Mono)
-- `refreshCells` reads `/api/prism/overview` and maps all 11 kernel components to sidebar cells
+- `refreshCells` reads `/api/prism/overview` and maps installed operators to sidebar
 - Beacon `/status` and `/health` commands now query live PRISM data
 - Approvals surface reads from `attention_required` in the overview response
 - `demoDB` fallback shows all 11 Cascadia components in offline state
