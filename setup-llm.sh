@@ -17,6 +17,8 @@ bold()    { echo -e "${BOLD}$*${NC}"; }
 
 MODEL_ARG="${1:-}"
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Non-interactive mode: if model arg provided, skip all prompts
+NON_INTERACTIVE="${MODEL_ARG:+yes}"
 # Models live inside the cascadia-os install folder
 MODELS_DIR="${CASCADIA_MODELS_DIR:-$INSTALL_DIR/models}"
 CONFIG_PATH="$INSTALL_DIR/config.json"
@@ -190,7 +192,9 @@ else
     echo "  [4] Skip   — configure later"
 fi
 echo ""
-read -r -p "  Choice [1-4, default: $([ "$RECOMMENDED_MODE" == "local" ] && echo 1 || echo 2)]: " MODE_CHOICE
+if [[ -n "$NON_INTERACTIVE" ]]; then MODE_CHOICE=1
+else read -r -p "  Choice [1-4, default: $([ \"$RECOMMENDED_MODE\" == \"local\" ] && echo 1 || echo 2)]: " MODE_CHOICE
+fi
 MODE_CHOICE="${MODE_CHOICE:-$([ "$RECOMMENDED_MODE" == "local" ] && echo 1 || echo 2)}"
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -243,12 +247,16 @@ if [[ "$MODE_CHOICE" == "1" ]]; then
     # RAM hard block — prevent OOM crashes
     if [[ "$MODEL_SIZE" == "7b" && $RAM_GB -lt 6 ]]; then
         warn "7B requires 8GB RAM — you have ${RAM_GB}GB"
-        read -r -p "  Switch to 3B instead? [Y/n]: " SWITCH
+        if [[ -n "$NON_INTERACTIVE" ]]; then MODEL_SIZE="3b"
+    else read -r -p "  Switch to 3B instead? [Y/n]: " SWITCH
         [[ "${SWITCH:-Y}" =~ ^[Yy]$ ]] && MODEL_SIZE="3b"
+    fi
     elif [[ "$MODEL_SIZE" == "14b" && $RAM_GB -lt 12 ]]; then
         warn "14B requires 16GB RAM — you have ${RAM_GB}GB"
-        read -r -p "  Switch to 7B instead? [Y/n]: " SWITCH
+        if [[ -n "$NON_INTERACTIVE" ]]; then MODEL_SIZE="7b"
+    else read -r -p "  Switch to 7B instead? [Y/n]: " SWITCH
         [[ "${SWITCH:-Y}" =~ ^[Yy]$ ]] && MODEL_SIZE="7b"
+    fi
     fi
 
     # Set model details
@@ -308,7 +316,9 @@ if [[ "$MODE_CHOICE" == "1" ]]; then
         for search_dir in "$HOME/Ai Models" "$HOME/ai models" "$HOME/models" "$HOME/cascadia-os/models"; do
             if [[ -f "$search_dir/$MODEL_FILE" ]]; then
                 info "Found model at: $search_dir/$MODEL_FILE"
-                read -r -p "  Use this existing file? [Y/n]: " USE_EXISTING
+                if [[ -n "$NON_INTERACTIVE" ]]; then USE_EXISTING="Y"
+                else read -r -p "  Use this existing file? [Y/n]: " USE_EXISTING
+                fi
                 if [[ "${USE_EXISTING:-Y}" =~ ^[Yy]$ ]]; then
                     MODEL_PATH="$search_dir/$MODEL_FILE"
                     MODELS_DIR="$search_dir"

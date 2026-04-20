@@ -257,11 +257,15 @@ class PrismService:
         if needs_setup:
             install_dir = str(Path(config_path).parent)
             def _run_setup():
-                _sp.run(
-                    ['bash', f'{install_dir}/setup-llm.sh', model_size],
-                    cwd=install_dir,
-                    capture_output=True,
-                )
+                log_path = f'{install_dir}/data/logs/setup-llm.log'
+                with open(log_path, 'a') as _log:
+                    _sp.run(
+                        ['bash', f'{install_dir}/setup-llm.sh', model_size],
+                        cwd=install_dir,
+                        stdin=_sp.DEVNULL,
+                        stdout=_log,
+                        stderr=_log,
+                    )
                 # After download completes, start llama.cpp automatically
                 try:
                     import json as _json
@@ -850,7 +854,7 @@ class PrismService:
             'llm_base_url': llm.get('base_url', 'http://127.0.0.1:8080'),
             'llm_provider': llm.get('provider', 'llamacpp'),
             # FLINT proxy is always available for chat — normalises model names
-            'flint_proxy_url': f'http://localhost:{self._flint_port}',
+            'flint_proxy_url': f'http://127.0.0.1:{self._flint_port}',
             'count': len(models),
             'generated_at': _now(),
         }
