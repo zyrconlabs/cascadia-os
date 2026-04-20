@@ -319,7 +319,7 @@ if [[ "$MODE_CHOICE" == "1" ]]; then
 
         if [[ ! -f "$MODEL_PATH" ]]; then
             echo ""
-            info "Downloading Qwen 2.5 ${MODEL_SIZE^^}..."
+            info "Downloading Qwen 2.5 $(echo $MODEL_SIZE | tr '[:lower:]' '[:upper:]')..."
             info "Destination: $MODEL_PATH"
             warn "Large file — do not close this window. Download resumes if interrupted."
             echo ""
