@@ -1,17 +1,18 @@
 {
-  "id":            "quote",
-  "name":          "QUOTE",
-  "version":       "1.0.0",
-  "port":          8007,
-  "entry_point":   "cascadia.operators.quote.server",
-  "health_path":   "/api/health",
-  "ui_path":       "/",
-  "description":   "Proposal and RFQ generator",
-  "prism_card":    true,
-  "autostart":     true,
-  "vault_dir":     "quote",
-  "dependencies":  ["flask", "flask-cors"],
-  "capabilities":  ["proposal.generate", "rfq.parse", "pricing.estimate"],
-  "autonomy_level": "assistive",
-  "author":        "Zyrcon Labs"
+  "id": "quote",
+  "name": "QUOTE",
+  "version": "1.0.0",
+  "port": 8007,
+  "description": "AI proposal and RFQ generator",
+  "entry": "dashboard.py",
+  "health_path": "/api/health",
+  "chat_path": "/api/chat",
+  "status_path": "/api/status",
+  "autostart": true,
+  "dependencies": [
+    "flask>=3.0.0",
+    "flask-cors>=4.0.0",
+    "requests>=2.31.0"
+  ],
+  "author": "Zyrcon Labs"
 }
