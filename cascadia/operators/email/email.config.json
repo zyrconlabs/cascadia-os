@@ -1,0 +1,11 @@
+{
+  "mode": "simulated",
+  "from_name": "Zyrcon-X",
+  "from_email": "noreply@zyrconlabs.com",
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_user": "",
+  "smtp_pass": "",
+  "default_to": "",
+  "_note": "Set mode to smtp and fill smtp_user/smtp_pass to enable real sending. For Gmail use an App Password not your account password. Set default_to to your email address to receive campaign reviews and reports."
+}
