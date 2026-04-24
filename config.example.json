@@ -1,6 +1,7 @@
 {
   "log_dir": "./data/logs",
   "database_path": "./data/runtime/cascadia.db",
+  "operators_registry_path": "~/cascadia-os-operators/registry.json",
   "llm": {
     "provider": null,
     "model": null,
