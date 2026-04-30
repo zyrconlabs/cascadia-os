@@ -180,5 +180,12 @@
   "scheduler": {
     "morning_brief_time": "07:00",
     "weekly_summary_time": "FRI 17:00"
+  },
+  "smtp": {
+    "host": "",
+    "port": 587,
+    "username": "",
+    "password": "",
+    "_note": "SMTP credentials for transactional billing emails. Store in .env not here. Leave blank to disable email (logs only)."
   }
 }
