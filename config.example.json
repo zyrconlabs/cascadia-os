@@ -169,6 +169,17 @@
   },
   "approval_escalation_email": "",
   "approval_escalation_email_note": "Email to cc on escalation alerts. Falls back to weekly_summary_email if blank.",
+  "alert_email": "",
+  "alert_email_note": "Email address for operator health alerts. Written by the setup wizard. Zyrcon emails this address when any operator is offline for 10+ minutes.",
+  "business_type": "",
+  "business_type_note": "Chosen during setup wizard — contractor, warehouse, professional, medical, retail, or general.",
+  "escalation": {
+    "primary_channel": "email",
+    "fallback_channel": "email",
+    "channels": {
+      "email": {"address": ""}
+    }
+  },
   "sentinel_fail_open": false,
   "sentinel_fail_open_note": "Production default is false (fail-closed): if SENTINEL is unreachable, side-effect steps are blocked. Set true only for dev/demo environments.",
   "license_secret": "replace-with-output-of-python3-c-import-secrets-print-secrets-token-hex-32",
